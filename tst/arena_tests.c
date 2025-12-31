@@ -1,0 +1,211 @@
+#include <stdio.h>
+#define DEBUG 1
+#define CFLAT_IMPLEMENTATION
+#define CFLAT_DEF static inline
+#include "../src/Cflat.h"
+#include "unitest.h"
+
+Arena *a;
+
+void arena_push_should_create_new_block() {
+    // Arrange
+    const CflatArenaNode *prev = a->curr;
+    const usize cap = a->curr->cap + 1;
+    // Act
+    arena_push(a, cap, 1, true);
+    // Assert
+    ASSERT_NOT_EQUAL((void*)prev, (void*)a->curr, "%p");
+    ASSERT_NOT_NULL((void*)
+        ((uptr)a->curr | (uptr)a->free)
+    );
+}
+
+void arena_clear_should_swap_pointers() {
+    // Arrange
+    // Act
+    arena_push(a, sizeof(i32), 1, true);
+    arena_clear(a);
+    // Assert
+    ASSERT_NULL(a->curr);
+    ASSERT_NOT_NULL(a->free);
+}
+
+void free_list_has_sufficiently_large_block() {
+    // Arrange
+    const usize cap = a->curr->cap + 1;
+    // Act
+    arena_push(a, cap, 1, true);
+    arena_clear(a);
+    arena_push(a, cap, 1, true);
+    // Assert
+    ASSERT_GREATER_OR_EQUAL(a->curr->cap, cap, "%zu");
+}
+
+void alloc_should_reset_len_when_taking_from_free_list() {
+    // Arrange
+    // Act
+    a->curr->len += 1;
+    arena_clear(a);
+    arena_push(a, 0, 1, true);
+    // Assert
+    ASSERT_EQUAL(a->curr->len, sizeof(struct cflat_arena_node), "%zu");
+}
+
+void free_list_does_not_have_sufficiently_large_block() {
+    // Arrange
+    const usize cap = a->curr->cap + 1;
+    const usize double_cap = 4 * a->curr->cap;
+    // Act
+    arena_push(a, cap, 1, true);
+    arena_clear(a);
+    arena_push(a, double_cap, 1, true);
+    // Assert
+    ASSERT_GREATER_OR_EQUAL(a->curr->cap, double_cap, "%zu");
+    ASSERT_LESS_OR_EQUAL(a->free->cap, double_cap, "%zu");
+}
+
+void dealloc_should_offset_len() {
+    // Arrange
+    // Act
+    arena_push(a, sizeof(i32), 1, true);
+    arena_pop(a, sizeof(i8));
+    // Assert
+    ASSERT_EQUAL(a->curr->len, sizeof(struct cflat_arena_node) + 3 * sizeof(i8), "%zu");
+}
+
+void pop_should_free_blocks() {
+    // Arrange
+    const usize prev_cap = a->curr->cap;
+    // Act
+    arena_push(a, a->curr->cap, 1, true);
+    arena_pop(a, a->curr->cap);
+    // Assert
+    ASSERT_LESS_THAN((a->curr) ? a->curr->cap : 0, prev_cap, "%zu");
+    ASSERT_NOT_NULL(a->free);
+}
+
+void da_append_should_work() {
+    // Arrange
+    typedef define_da(i32) NumbersDa;
+    NumbersDa *xs = da_new(NumbersDa*, a, 0);
+    // Act
+    for (i32 i = 0; i < 100000; ++i) {
+        da_append(xs, i);
+        // Assert
+        ASSERT_EQUAL(xs->data[i], i, "%d");
+    }
+}
+
+void da_clone_should_work() {
+    // Arrange
+    typedef define_da(i32) NumbersDa;
+    NumbersDa *xs = da_new(NumbersDa*, a, 0);
+    for (i32 i = 0; i < 100000; ++i) {
+        da_append(xs, i);
+    }
+    // Act
+    const NumbersDa *ys = da_clone(xs, 0);
+    // Assert
+    ASSERT_EQUAL(xs->count, ys->count, "%zu");
+    for (i32 i = 0; i < 100000; ++i) {
+        ASSERT_EQUAL(ys->data[i], i, "%d");
+    }
+}
+
+void arena_delete_wont_free_stack_memory() {
+    // Arrange
+    Arena *stack_arena = stackalloc(10000);
+    arena_init(stack_arena, 10000);
+    // Act
+    arena_delete(stack_arena);
+    // Assert
+}
+
+void da_alloc_jagged_array_leak_test() {
+    // Arrange
+    typedef define_da(i32) *NumbersDa;
+    typedef define_da(NumbersDa) *JaggedDa;
+    JaggedDa xs = da_new(JaggedDa, a, 0);
+    // Act
+    da_append(xs, da_new(NumbersDa, a, 0));
+    da_append(xs, da_new(NumbersDa, a, 0));
+    da_append(xs->data[0], 2);
+    da_append(xs->data[0], 4);
+    da_append(xs->data[1], 3);
+    // Assert
+    ASSERT_EQUAL(xs->data[0]->data[0], 2, "%d");
+    ASSERT_EQUAL(xs->data[0]->data[1], 4, "%d");
+    ASSERT_EQUAL(xs->data[1]->data[0], 3, "%d");
+}
+
+void array_init_should_work() {
+    // Arrange
+    typedef define_array(i32) NumbersArray;
+    const usize len = 100000;
+    NumbersArray *stackp = stackalloc(array_allocation_size(i32, 100000));
+    NumbersArray *xs = array_init(stackp, len, true);
+    // Act
+    for (u32 i = 0; i < xs->length; ++i) {
+        xs->data[i] = (i32) i;
+    }
+    // Assert
+    ASSERT_NOT_NULL(xs);
+    ASSERT_EQUAL(xs->length, (usize)len, "%zu");
+    for (u32 i = 0; i < xs->length; ++i) {
+        ASSERT_EQUAL(xs->data[i], (i32)i, "%d");
+    }
+}
+
+void array_new_should_work() {
+    // Arrange
+    typedef define_array(i32) NumbersArray;
+    const usize len = 100000;
+    NumbersArray *xs = array_new(NumbersArray*, len, a, 0);
+    assert(xs);
+    // Act
+    for (u32 i = 0; i < xs->length; ++i) {
+        xs->data[i] = (i32) i;
+    }
+    // Assert
+    ASSERT_NOT_NULL(xs);
+    ASSERT_EQUAL(xs->length, (usize)len, "%zu");
+    for (u32 i = 0; i < xs->length; ++i) {
+        ASSERT_EQUAL(xs->data[i], (i32)i, "%d");
+    }
+}
+
+int main(void) {
+    typedef void testfn();
+    testfn *tests[] = {
+        arena_push_should_create_new_block,
+        arena_clear_should_swap_pointers,
+        alloc_should_reset_len_when_taking_from_free_list,
+        free_list_has_sufficiently_large_block,
+        free_list_does_not_have_sufficiently_large_block,
+        dealloc_should_offset_len,
+        pop_should_free_blocks,
+        da_append_should_work,
+        da_clone_should_work,
+        arena_delete_wont_free_stack_memory,
+        da_alloc_jagged_array_leak_test,
+        array_init_should_work,
+        array_new_should_work,
+    };
+
+    const usize test_count = sizeof(tests) / sizeof(tests[0]);
+
+    for (usize i = 0; i < test_count; ++i) {
+        a = arena_new(0);
+        tests[i]();
+        arena_delete(a);
+    }
+
+    for (usize i = 0; i < test_count; ++i) {
+        a = rent_arena();
+        tests[i]();
+        return_arena(a);
+    }
+
+    arena_delete(cflat__tls_arena_pool);
+    return 0;
+}
