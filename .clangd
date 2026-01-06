@@ -1,0 +1,18 @@
+Diagnostics:
+  MissingIncludes: None
+  UnusedIncludes: None
+  Suppress: [
+    pp_hash_error,
+    unknown_typename,
+  ]
+
+CompileFlags:
+  Add: [ 
+    -xc,
+    -std=c23,
+    -Wall,
+    -Wextra,
+    -Wpedantic,
+    -Wno-empty-translation-unit,
+    -DCFLAT_IMPLEMENTATION, 
+  ]

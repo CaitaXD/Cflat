@@ -9,15 +9,6 @@ typedef cflat_define_da(char, cflat_string_builder) CflatStringBuilder;
 typedef cflat_define_array(char, cflat_string) CflatString;
 typedef cflat_define_slice(char, cflat_string_view) CflatStringView;
 
-#define cflat_define_padded_struct(type, size) union {                                                                 \
-    byte raw[sizeof(type) + (size)];                                                                                   \
-    type structure;                                                                                                    \
-}
-
-#define cflat_padded_struct(type, size, ...) &(cflat_define_padded_struct(type, size)) {                               \
-    .structure={ __VA_ARGS__ }                                                                                         \
-}.structure
-
 #define cflat__padded_string(STR)                                                                                      \
     cflat_padded_struct(CflatString, sizeof(CflatString)+sizeof(STR), .length=sizeof((STR))-1)                         \
 
@@ -28,7 +19,6 @@ typedef cflat_define_slice(char, cflat_string_view) CflatStringView;
         .capacity=align_pow2(sizeof(CflatStringBuilder)+sizeof(STR), 16),                                              \
         .count=sizeof((STR))-1                                                                                         \
     )                                                                                                                  \
-
 
 #define cflat_reinterpret_cast(To, X) (*(To*)&(X))
 
