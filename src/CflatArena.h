@@ -45,13 +45,6 @@ CFLAT_DEF void cflat_arena_set_pos(CflatArena *arena, usize pos);
 CFLAT_DEF void cflat_arena_clear(CflatArena *arena);
 CFLAT_DEF void cflat_arena_delete(CflatArena *arena);
 
-#define cflat_define_padded_struct(type, size) union {      \
-    byte raw[sizeof(type) + (size)];                        \
-    type structure;                                         \
-}
-
-#define cflat_padded_struct(type, size) &(cflat_define_padded_struct(type, size)){0}.structure
-
 CFLAT_DEF CflatArenaScope cflat_arena_scope_begin(CflatArena *arena);
 CFLAT_DEF void cflat_arena_scope_end(CflatArenaScope temp_arena);
 

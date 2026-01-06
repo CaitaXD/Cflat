@@ -18,6 +18,8 @@
 #include "CflatArray.h"
 #include "CflatDa.h"
 #include "CflatSlice.h"
+#include "CflatString.h"
+
 
 #if defined(__cplusplus)
 }
