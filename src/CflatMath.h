@@ -35,6 +35,16 @@ CFLAT_DEF c32 sexpdecay_c32(c32 a, c32 b, f32 decay, f32 dt);
 
 #if !defined(CFLAT_NO_GENERIC_MATH)
 
+#if __SIZEOF_FLOAT__ == 4
+static f32 clfat__pi32;
+#endif
+#if __SIZEOF_DOUBLE__ == 8
+static f64 clfat__pi64;
+#endif
+#if __SIZEOF_LONG_DOUBLE__ == 16
+static f128 clfat__pi128;
+#endif
+
 #define log_base(base, x) (log((x))/log((base)))
 
 #define lerp(A,B,T) _Generic((A),                           \
