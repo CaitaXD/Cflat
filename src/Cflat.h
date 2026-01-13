@@ -43,6 +43,7 @@ extern "C"
 #include "CflatDa.h"
 #include "CflatSlice.h"
 #include "CflatString.h"
+#include "CflatMath.h"
 
 #if defined(__cplusplus)
 }

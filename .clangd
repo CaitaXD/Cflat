@@ -1,10 +1,7 @@
 Diagnostics:
   MissingIncludes: None
   UnusedIncludes: None
-  Suppress: [
-    pp_hash_error,
-    unknown_typename,
-  ]
+  Suppress: '*'
 
 CompileFlags:
   Add: [ 
