@@ -1,5 +1,6 @@
 #ifndef CFLAT_ARENA_H
 #define CFLAT_ARENA_H
+#include <assert.h>
 #include <stdbool.h>
 #include "CflatCore.h"
 
@@ -59,9 +60,9 @@ CFLAT_DEF CflatTempArena cflat_get_scratch_arena_pool(CflatArena **pool, usize p
 // ... (conflicts): Arena*[] | null
 #define cflat_get_scratch_arena(...) cflat_get_scratch_arena_pool(                                  \
     cflat__tls_scratches,                                                                           \
-    cflat_array_length(cflat__tls_scratches),                                                       \
+    CFLAT_ARRAY_SIZE(cflat__tls_scratches),                                                       \
     ((CflatArena*[]){__VA_ARGS__}),                                                                 \
-    cflat_array_length(((CflatArena*[]){__VA_ARGS__}))                                              \
+    CFLAT_ARRAY_SIZE(((CflatArena*[]){__VA_ARGS__}))                                              \
 )
 
 
@@ -175,6 +176,8 @@ CflatArena* cflat_arena_init(void *mem, const usize size) {
 
 CflatArena* cflat_arena_new(const usize reserve, const usize commit) {
 
+    cflat_assert(reserve >= commit);
+
     const usize page_size = 4096;
     const usize reserve_size = cflat_align_pow2(reserve, page_size);
     const usize commit_size = cflat_align_pow2(commit, page_size);
@@ -227,7 +230,7 @@ void cflat_arena_delete(CflatArena *arena) {
 void* cflat_arena_push_opt(CflatArena *arena, const usize size, CflatAllocOpt opt) {
 
     cflat_assert(arena != NULL);
-    if(opt.align == 0) opt.align = cflat_alignof(uptr);
+    if(opt.align == 0) opt.align = cflat_alignof(void*);
 
     CflatArenaNode *current_node = arena->curr;
     uptr pre = cflat_align_pow2(current_node->pos, opt.align);
@@ -284,7 +287,7 @@ void* cflat_arena_push_opt(CflatArena *arena, const usize size, CflatAllocOpt op
         current_node->pos = pst;
         ASAN_UNPOISON_MEMORY_REGION(result, size);
         if (opt.clear) cflat_mem_zero(result, size);
-        arena->pos += pst;
+        arena->pos += pst - current_node->pos;
     }
 
     return result;
