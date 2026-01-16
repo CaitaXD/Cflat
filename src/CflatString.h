@@ -28,7 +28,7 @@ typedef cflat_define_slice(char, cflat_string_view) CflatStringView;
     const T*: (value),                                                                                                 \
     const T const*: (value)                                                                                            \
 
-#define cflat_sv_new(S) _Generic(((cflat_typeof((S))*)0),                                                              \
+#define cflat_sv_lit(S) _Generic(((cflat_typeof((S))*)0),                                                              \
                                                                                                                        \
     char(*)[sizeof(S)]: (CflatStringView) { /*NOLINT(*-sizeof-expression)*/                                            \
         cflat_reinterpret_cast(cflat_typeof(char[sizeof(S)]), (S)), /*NOLINT(*-sizeof-expression)*/                    \
@@ -71,7 +71,7 @@ typedef cflat_define_slice(char, cflat_string_view) CflatStringView;
 #   define StringBuilder CflatStringBuilder
 #   define String CflatString
 #   define StringView CflatStringView
-#   define sv_new cflat_sv_new
+#   define sv_lit cflat_sv_lit
 #endif // CFLAT_STRING_NO_ALIAS
 
 

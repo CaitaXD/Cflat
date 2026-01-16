@@ -197,7 +197,7 @@ int main(void) {
         array_new_should_work,
     };
 
-    const usize test_count = cflat_array_length(tests);
+    const usize test_count = CFLAT_ARRAY_SIZE(tests);
 
     for (usize i = 0; i < test_count; ++i) {
         a = arena_new(KiB(64), KiB(4));

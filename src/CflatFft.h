@@ -4,36 +4,41 @@
 #include "CflatCore.h"
 #include "CflatMath.h"
 
-void fast_fourier_transform_32(const f32 *samples, c32 *waves, const usize flen);
+void fast_fourier_transform_f32(const usize fft_size, const usize channels, const f32 frames[fft_size][channels], c32 waves[fft_size][channels]);
 
 #if defined(CFLAT_IMPLEMENTATION)
 
-void fast_fourier_transform_32_rec(const f32 *samples, const usize odds_offset, c32 *waves, const usize flen) {
-    cflat_assert(odds_offset != 0);
-    cflat_assert(is_pow2(flen));
-    if (flen == 0) return;
+void fast_fourier_transform_32_rec(const usize len, const usize channels, const usize stride, const f32 in[len][channels], c32 out[len][channels]) {
+    cflat_assert(stride != 0);
+    cflat_assert(is_pow2(len));
+    if (len == 0) return;
 
-    if (flen == 1) {
-        waves[0] = samples[0];
+    if (len == 1) {
+        
+        for (usize channel = 0; channel < channels; channel += 1) {
+            out[0][channel] = in[0][channel];
+        }
         return;
     }
     
-    fast_fourier_transform_32_rec(samples,               odds_offset*2, waves,          flen/2);
-    fast_fourier_transform_32_rec(samples + odds_offset, odds_offset*2, waves + flen/2, flen/2);
+    fast_fourier_transform_32_rec(len/2, channels, stride*2, in,          out);
+    fast_fourier_transform_32_rec(len/2, channels, stride*2, in + stride, out + len/2);
 
-    for (usize k = 0; k < flen/2; k += 1) {
-        f32 hz = (f32)k/flen;
-        c32 oddexp = cexp(-2*I*clfat__pi32*hz)*waves[k+flen/2];
-        c32 even = waves[k];
-        waves[k]        = even + oddexp;
-        waves[k+flen/2] = even - oddexp;
+    for (usize k = 0; k < len/2; k += 1) {
+        f32 bin = (f32)k/len;
+        
+        for (usize channel = 0; channel < channels; channel += 1) {
+            c32 oddexp = cexp(-2*I*clfat__pi32*bin) * out[k+len/2][channel];
+            c32 even   = out[k][channel];
+            out[k][channel]       = even + oddexp;
+            out[k+len/2][channel] = even - oddexp;
+        }
     }
 }
 
-
-void fast_fourier_transform_32(const f32 *samples, c32 *waves, const usize flen) {
+void fast_fourier_transform_f32(const usize fft_size, const usize channels, const f32 frames[fft_size][channels], c32 out[fft_size][channels]) {
     clfat__pi32 = atan2f(1,1)*4;
-    fast_fourier_transform_32_rec(samples, 1, waves, flen);
+    fast_fourier_transform_32_rec(fft_size, channels, 1, frames, out);    
 }
 
 

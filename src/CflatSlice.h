@@ -30,7 +30,7 @@ CFLAT_DEF CflatOpaqueSlice cflat_slice_new_opt(usize element_size, usize length,
 )
 
 #define cflat_slice_lit(TSlice, CARRAY) (                                                       \
-    (TSlice) { .data = (CARRAY), .length = cflat_array_length((CARRAY)) }                       \
+    (TSlice) { .data = (CARRAY), .length = CFLAT_ARRAY_SIZE((CARRAY)) }                       \
 )
 
 CFLAT_DEF CflatOpaqueSlice (cflat_slice)(usize element_size, CflatOpaqueSlice slice, isize offset, isize length);

@@ -130,8 +130,12 @@ typedef SSIZE_T ssize_t;
 )(x)
 
 #define cflat_sizeof_member(T, member) sizeof ((T*)0)->member
-#define cflat_static_assert(e,msg) (void)sizeof(struct {char _; static_assert (e,msg); })
-#define cflat_array_length(XS) (sizeof(XS)/sizeof((XS)[0]))
+#define cflat_static_assert(e) (void)sizeof(struct {char _; static_assert (e, ""); })
+
+#define CFLAT_ARRAY_SIZE(XS) (sizeof((XS))/sizeof((XS)[0]))
+#define CFLAT_ROW_SIZE(XS) CFLAT_ARRAY_SIZE(XS)
+#define CFLAT_COL_SIZE(XS) (sizeof((XS))/sizeof((XS)[0][0]) / CFLAT_ROW_SIZE(XS))
+
 #define cflat_min(A,B) (((A)<(B))?(A):(B))
 #define cflat_max(A,B) (((A)>(B))?(A):(B))
 #define cflat_abs(A) (((A) < 0) ? (-(A)) : ((A)))
@@ -140,13 +144,14 @@ typedef SSIZE_T ssize_t;
     u8: printf(#exp" (%u) (0x%x) \n", *(u8*)&cflat_lit((exp)), *(u8*)&cflat_lit((exp))),                    \
     u16: printf(#exp" (%u) (0x%x) \n", *(u16*)&cflat_lit((exp)), *(u16*)&cflat_lit((exp))),                 \
     u32: printf(#exp" (%u) (0x%x) \n", *(u32*)&cflat_lit((exp)), *(u32*)&cflat_lit((exp))),                 \
-    u64: printf(#exp" (%lu) (0x%lx) \n", *(u64*)&cflat_lit((exp)), *(u64*)&cflat_lit((exp))),               \
+    u64: printf(#exp" (%zu) (0x%llx) \n", *(u64*)&cflat_lit((exp)), *(u64*)&cflat_lit((exp))),              \
     i8: printf(#exp" (%i)\n", *(i8*)&cflat_lit((exp))),                                                     \
     i16: printf(#exp" (%i)\n", *(i16*)&cflat_lit((exp))),                                                   \
     i32: printf(#exp" (%i)\n", *(i32*)&cflat_lit((exp))),                                                   \
-    i64: printf(#exp" (%li)\n", *(i64*)&cflat_lit((exp))),                                                  \
+    i64: printf(#exp" (%lli)\n", *(i64*)&cflat_lit((exp))),                                                 \
     f32: printf(#exp" (%f)\n", *(f32*)&cflat_lit((exp))),                                                   \
-    f64: printf(#exp" (%f)\n", *(f64*)&cflat_lit((exp))),                                                   \
+    f64: printf(#exp" (%lf)\n", *(f64*)&cflat_lit((exp))),                                                  \
+    long double: printf(#exp" (%Lf)\n", *(long double*)&cflat_lit((exp))),                                  \
     void*: printf(#exp" (%p)\n", *(void**)&cflat_lit((exp))),                                               \
     default: printf(#exp "\n")                                                                              \
 )
@@ -445,6 +450,9 @@ u64 (cflat_prev_pow2_u64)(u64 x)
 #   define ll_push cflat_ll_push
 #   define ll_pop cflat_ll_pop
 #   define swap cflat_swap
+#   ifndef ARRAY_SIZE
+#       define ARRAY_SIZE CFLAT_ARRAY_SIZE
+#   endif
 #endif // CFLAT_NO_ALIAS
 
 #endif //CFLAT_DEF_H
