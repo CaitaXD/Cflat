@@ -23,8 +23,6 @@
 #   define C99_OR_GREATER 1
 #endif
 
-
-
 #if defined(_WIN32)
 #  define OS_WINDOWS 1
 #elif defined(__gnu_linux__) || defined(__linux__)
@@ -67,18 +65,13 @@ typedef SSIZE_T ssize_t;
 #   define cflat_alignof alignof
 #else
 #   define cflat_typeof __typeof__
+#   define cflat_alignof(T) __alignof__(T)
 #endif
 #if COMPILER_MSVC
-#   if !defined (C23_OR_GREATER)
-#       define cflat_alignof(T) __alignof(T)
-#   endif
 #   if defined(__SANITIZE_ADDRESS__)
 #       define ASAN_ENABLED 1
 #   endif
 #elif COMPILER_CLANG
-#   if !defined (C23_OR_GREATER)
-#       define cflat_alignof(T) __alignof(T)
-#   endif
 #   if defined(__has_feature)
 #       if __has_feature(address_sanitizer)
 #           define ASAN_ENABLED 1
@@ -87,9 +80,6 @@ typedef SSIZE_T ssize_t;
 #       define ASAN_ENABLED 1
 #   endif
 #elif COMPILER_GCC
-#   if !defined (C23_OR_GREATER)
-#       define cflat_alignof(T) __alignof__(T)
-#   endif
     #if defined(__SANITIZE_ADDRESS__)
 #       define ASAN_ENABLED 1
 #   endif
@@ -140,22 +130,6 @@ typedef SSIZE_T ssize_t;
 #define cflat_max(A,B) (((A)>(B))?(A):(B))
 #define cflat_abs(A) (((A) < 0) ? (-(A)) : ((A)))
 
-#define cflat_log_expression(exp) _Generic((exp),                                                           \
-    u8: printf(#exp" (%u) (0x%x) \n", *(u8*)&cflat_lit((exp)), *(u8*)&cflat_lit((exp))),                    \
-    u16: printf(#exp" (%u) (0x%x) \n", *(u16*)&cflat_lit((exp)), *(u16*)&cflat_lit((exp))),                 \
-    u32: printf(#exp" (%u) (0x%x) \n", *(u32*)&cflat_lit((exp)), *(u32*)&cflat_lit((exp))),                 \
-    u64: printf(#exp" (%zu) (0x%llx) \n", *(u64*)&cflat_lit((exp)), *(u64*)&cflat_lit((exp))),              \
-    i8: printf(#exp" (%i)\n", *(i8*)&cflat_lit((exp))),                                                     \
-    i16: printf(#exp" (%i)\n", *(i16*)&cflat_lit((exp))),                                                   \
-    i32: printf(#exp" (%i)\n", *(i32*)&cflat_lit((exp))),                                                   \
-    i64: printf(#exp" (%lli)\n", *(i64*)&cflat_lit((exp))),                                                 \
-    f32: printf(#exp" (%f)\n", *(f32*)&cflat_lit((exp))),                                                   \
-    f64: printf(#exp" (%lf)\n", *(f64*)&cflat_lit((exp))),                                                  \
-    long double: printf(#exp" (%Lf)\n", *(long double*)&cflat_lit((exp))),                                  \
-    void*: printf(#exp" (%p)\n", *(void**)&cflat_lit((exp))),                                               \
-    default: printf(#exp "\n")                                                                              \
-)
-
 #define cflat_assert_type_member(T, member) (void)cflat_static_assert(cflat_sizeof_member(T,member), "")
 #define cflat_assert_ptr_has_member(p, member) (void)cflat_static_assert(sizeof(p)->member, "")
 #define cflat_assert_has_member(p, member) (void)cflat_static_assert(sizeof(p).member, "")
@@ -166,6 +140,8 @@ typedef SSIZE_T ssize_t;
 #define cflat_defer(begin, end) \
     for(int CONCAT(_i, __LINE__) = 0; CONCAT(_i, __LINE__) == 0; CONCAT(_i, __LINE__)++) \
     for(begin; CONCAT(_i, __LINE__) == 0; CONCAT(_i, __LINE__)++, end)
+
+#define cflat_defer_exit continue
 
 #define cflat_ll_push(top,node,link) ((node)->link=(top), (top)=(node))
 #define cflat_ll_pop(top, link) ((top)=(top)->link)
@@ -181,16 +157,34 @@ typedef SSIZE_T ssize_t;
     .structure={ __VA_ARGS__ }                                                                                         \
 }.structure
 
-#if !defined(CFLAT_NO_CRT)
-#   include <string.h>
-#   include <stdlib.h>
-#   define cflat_mem_copy memcpy
-#   define cflat_mem_zero(mem, len) memset(mem, 0, len)
-#endif
-// TODO: No Crt Fallbacks
+#include <string.h>
+#include <stdlib.h>
+#define cflat_mem_copy memcpy
+#define cflat_mem_zero(mem, len) memset(mem, 0, len)
+
+#define cflat_lit(LITERAL) (*((cflat_typeof(LITERAL)[1]) {LITERAL}))
+#define cflat_plit(LITERAL) (((cflat_typeof(LITERAL)[1]) {LITERAL}))
 
 #if !defined(container_of)
 #   define container_of(ptr, type, member) ((type *) ((byte *)(ptr) - offsetof(type, member)))
+#endif
+
+#if defined(NO_BOUNDS_CHECK)
+#   define cflat_bounds_check(index, len) ((void)(index), (void)(len))
+#else
+#   define cflat_bounds_check(index, len) cflat_assert((usize)(index) < (usize)(len) && "Index out of bounds")
+#endif
+
+#if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+#define OVERRIDE_INIT(CLITERAL, ...)                            \
+__extension__  ({                                               \
+    _Pragma("GCC diagnostic push")                              \
+    _Pragma("GCC diagnostic ignored \"-Woverride-init\"")       \
+    ((CLITERAL) {__VA_ARGS__});                                 \
+    _Pragma("GCC diagnostic pop")                               \
+})
+#else
+#   define OVERRIDE_INIT(CLITERAL, ...) ((CLITERAL) {__VA_ARGS__})
 #endif
 
 #if !defined(CFLAT_NO_TYPEDEF_STDINT)
@@ -254,6 +248,12 @@ u16 (cflat_next_pow2_u16)(u16 x);
 #   define cflat_thread_local __declspec(thread)
 #else
 #   define cflat_thread_local _Thread_local
+#endif
+
+#if defined(OS_WINDOWS)
+#   define cflat_export __declspec(dllexport)
+#elif defined(OS_UNIX)
+#   define cflat_export __attribute__((visibility("default")))
 #endif
 
 #if defined(CFLAT_IMPLEMENTATION)
@@ -447,12 +447,16 @@ u64 (cflat_prev_pow2_u64)(u64 x)
 #   endif
 #   define trap cflat_trap
 #   define defer cflat_defer
+#   define defer_exit cflat_defer_exit
+#   define exit_defer cflat_defer_exit
 #   define ll_push cflat_ll_push
 #   define ll_pop cflat_ll_pop
 #   define swap cflat_swap
 #   ifndef ARRAY_SIZE
 #       define ARRAY_SIZE CFLAT_ARRAY_SIZE
 #   endif
+#   define mem_copy cflat_mem_copy
+#   define mem_zero cflat_mem_zero
 #endif // CFLAT_NO_ALIAS
 
 #endif //CFLAT_DEF_H

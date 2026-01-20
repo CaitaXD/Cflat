@@ -12,7 +12,7 @@
     cflat_slice_fields(T);                                                                      \
 }
 
-typedef cflat_define_slice(void) CflatOpaqueSlice;
+typedef cflat_define_slice(void, cflat_opaque_slice) CflatOpaqueSlice;
 
 typedef struct cflat_slice_new_opt {
     usize align;
@@ -21,8 +21,8 @@ typedef struct cflat_slice_new_opt {
 
 CFLAT_DEF CflatOpaqueSlice cflat_slice_new_opt(usize element_size, usize length, CflatArena *a, CflatSliceNewOpt opt);
 
-#define cflat_slice_new(TSlice, size, arena, ...) (                                                                             \
-    *(TSlice*)cflat_slice_new_opt(cflat_sizeof_member(TSlice, data[0]), (size), (arena), ((CflatSliceNewOpt) {__VA_ARGS__}))    \
+#define cflat_slice_new(TSlice, size, arena, ...) (                                                                              \
+    *(TSlice*)cflat_slice_new_opt(cflat_sizeof_member(TSlice, data[0]), (size), (arena), ((CflatSliceNewOpt) {__VA_ARGS__}))     \
 )
 
 #define cflat_slice_init(TSlice, p, len) (                                                      \
@@ -30,8 +30,11 @@ CFLAT_DEF CflatOpaqueSlice cflat_slice_new_opt(usize element_size, usize length,
 )
 
 #define cflat_slice_lit(TSlice, CARRAY) (                                                       \
-    (TSlice) { .data = (CARRAY), .length = CFLAT_ARRAY_SIZE((CARRAY)) }                       \
+    (TSlice) { .data = (CARRAY), .length = CFLAT_ARRAY_SIZE((CARRAY)) }                         \
 )
+
+#define cflat_slice_at(slice, index) (cflat_bounds_check((index), (slice)->length), &(slice)->data[(index)])
+#define cflat_slice_get(slice, index) (*(cflat_slice_at((slice), (index))))
 
 CFLAT_DEF CflatOpaqueSlice (cflat_slice)(usize element_size, CflatOpaqueSlice slice, isize offset, isize length);
 
@@ -85,6 +88,8 @@ CflatOpaqueSlice cflat_slice_new_opt(usize element_size, usize length, CflatAren
 #   define define_slice cflat_define_slice
 #   define slice_lit cflat_slice_lit
 #   define slice_from_array cflat_slice_from_array
+#   define slice_at cflat_slice_at
+#   define slice_get cflat_slice_get
 
 #endif // CFLAT_SLICE_NO_ALIAS
 

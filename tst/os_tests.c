@@ -20,27 +20,27 @@ EXPORT char *hello(const char *name) {
     return buffer;
 }
 
-void os_library_open_should_work() {
+void os_library_open_should_work(void) {
     // Arrange
     // Act
-    OsHandle handle = lib_open((CflatStringView){0});
+    OsHandle handle = lib_open(NULL);
     // Assert
     ASSERT_NOT_NULL(handle);
 }
 
-void os_library_load_symbol_should_work() {
+void os_library_load_symbol_should_work(void) {
     // Arrange
-    OsHandle handle = lib_open((CflatStringView){0});
+    OsHandle handle = lib_open(NULL);
     // Act
-    void *ptr = load_symbol(handle, "hello");
-    char *result = ((char*(*)(const char *name))ptr) ("from dynamically loaded symbol");
+    Procedure *ptr = load_symbol(handle, "hello");
+    char *result = ((char* (*) (const char*))ptr) ("from dynamically loaded symbol");
     // Assert
-    ASSERT_NOT_NULL(ptr);
+    ASSERT_NOT_NULL((uptr)ptr);
     ASSERT_TRUE(strncmp(result, "Hello from dynamically loaded symbol", strlen("Hello from dynamically loaded symbol")) == 0);
 }
 
 int main(void) {
-    typedef void testfn();
+    typedef void testfn(void);
     testfn *tests[] = {
         os_library_open_should_work,
         os_library_load_symbol_should_work,

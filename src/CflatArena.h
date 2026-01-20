@@ -4,9 +4,10 @@
 #include <stdbool.h>
 #include "CflatCore.h"
 
-#define CFLAT_ARENA_HEADER (sizeof(CflatArenaNode))
 #define cflat_stackalloc(SIZE) ((void*)((byte[(SIZE)]){0}))
-#define cflat_lit(LITERAL) (*((typeof(LITERAL)[1]) {LITERAL}))
+
+#define CFLAT_DEFAULT_RESERVE_SIZE MiB(64)
+#define CFLAT_DEFAULT_COMMIT_SIZE  KiB(4)
 
 typedef struct cflat_arena {
     struct cflat_arena_node *curr;
@@ -31,7 +32,14 @@ typedef struct cflat_arena_scope
 } CflatTempArena;
 
 CFLAT_DEF CflatArena* cflat_arena_init(void *mem, usize size);
-CFLAT_DEF CflatArena* cflat_arena_new(usize reserve, usize commit);
+
+typedef struct cflat_arena_new_opt {
+    usize reserve;
+    usize commit;
+} CflatArenaNewOpt;
+
+CFLAT_DEF CflatArena* cflat_arena_new_opt(CflatArenaNewOpt opt);
+#define cflat_arena_new(...) cflat_arena_new_opt(OVERRIDE_INIT(CflatArenaNewOpt, .reserve = CFLAT_DEFAULT_RESERVE_SIZE, .commit = CFLAT_DEFAULT_COMMIT_SIZE, __VA_ARGS__ ))
 
 typedef struct cflat_alloc_opt {
     usize align;
@@ -40,7 +48,7 @@ typedef struct cflat_alloc_opt {
 
 CFLAT_DEF void* cflat_arena_push_opt(CflatArena *arena, usize size, CflatAllocOpt opt);
 
-#define cflat_arena_push(a, size, ...) cflat_arena_push_opt((a), (size), (CflatAllocOpt) {__VA_ARGS__})
+#define cflat_arena_push(a, size, ...) cflat_arena_push_opt((a), (size), OVERRIDE_INIT(CflatAllocOpt, __VA_ARGS__))
 
 CFLAT_DEF void cflat_arena_pop(CflatArena *arena, usize size);
 CFLAT_DEF void cflat_arena_set_pos(CflatArena *arena, usize pos);
@@ -60,16 +68,16 @@ CFLAT_DEF CflatTempArena cflat_get_scratch_arena_pool(CflatArena **pool, usize p
 // ... (conflicts): Arena*[] | null
 #define cflat_get_scratch_arena(...) cflat_get_scratch_arena_pool(                                  \
     cflat__tls_scratches,                                                                           \
-    CFLAT_ARRAY_SIZE(cflat__tls_scratches),                                                       \
+    CFLAT_ARRAY_SIZE(cflat__tls_scratches),                                                         \
     ((CflatArena*[]){__VA_ARGS__}),                                                                 \
-    CFLAT_ARRAY_SIZE(((CflatArena*[]){__VA_ARGS__}))                                              \
+    CFLAT_ARRAY_SIZE(((CflatArena*[]){__VA_ARGS__}))                                                \
 )
-
 
 // tmp: TempArena
 // ... (conflicts): Arena*[] | null
-#define cflat_scratch_arena_scope(tmp, ...)\
-    cflat_defer(tmp = cflat_get_scratch_arena(__VA_ARGS__), cflat_arena_temp_end((tmp)))
+#define cflat_scratch_arena_scope(tmp, ...) cflat_defer(tmp = cflat_get_scratch_arena(__VA_ARGS__), cflat_arena_temp_end((tmp)))
+
+#define cflat_scope_exit continue
 
 #if defined(CFLAT_IMPLEMENTATION)
 
@@ -174,13 +182,13 @@ CflatArena* cflat_arena_init(void *mem, const usize size) {
     return &((CflatArenaNode*)mem)->_arena;
 }
 
-CflatArena* cflat_arena_new(const usize reserve, const usize commit) {
+CflatArena* cflat_arena_new_opt(CflatArenaNewOpt opt) {
 
-    cflat_assert(reserve >= commit);
+    cflat_assert(opt.reserve >= opt.commit);
 
     const usize page_size = 4096;
-    const usize reserve_size = cflat_align_pow2(reserve, page_size);
-    const usize commit_size = cflat_align_pow2(commit, page_size);
+    const usize reserve_size = cflat_align_pow2(opt.reserve, page_size);
+    const usize commit_size = cflat_align_pow2(opt.commit, page_size);
 
     CflatArenaNode* node = cflat__os_reserve(reserve_size);
     VALGRIND_MALLOCLIKE_BLOCK(node, reserve_size, 0, false);
@@ -199,7 +207,7 @@ void cflat_arena_delete(CflatArena *arena) {
     CflatArenaNode *current = arena->curr;
     CflatArenaNode *node = arena->free;
     CflatArenaNode *it;
-    cflat_mem_zero(arena, sizeof *arena);
+    cflat_mem_zero(arena, sizeof (*arena));
 
     for (it = current; it;) {
         CflatArenaNode *prev = it->prev;
@@ -229,8 +237,8 @@ void cflat_arena_delete(CflatArena *arena) {
 
 void* cflat_arena_push_opt(CflatArena *arena, const usize size, CflatAllocOpt opt) {
 
-    cflat_assert(arena != NULL);
-    if(opt.align == 0) opt.align = cflat_alignof(void*);
+    if (arena == NULL) return NULL;
+    if(opt.align == 0) opt.align = cflat_alignof(uptr);
 
     CflatArenaNode *current_node = arena->curr;
     uptr pre = cflat_align_pow2(current_node->pos, opt.align);
@@ -258,7 +266,7 @@ void* cflat_arena_push_opt(CflatArena *arena, const usize size, CflatAllocOpt op
                 res = cflat_align_pow2(size + sizeof(CflatArenaNode), opt.align);
                 cmt = cflat_align_pow2(size + sizeof(CflatArenaNode), opt.align);
             }
-            new_node = cflat_arena_new(res, cmt)->curr;
+            new_node = cflat_arena_new(.reserve = res, .commit = cmt)->curr;
         }
 
         cflat_ll_push(arena->curr, new_node, prev);
@@ -421,7 +429,11 @@ CflatTempArena cflat_get_scratch_arena_pool(CflatArena **pool, const usize pool_
 #   define arena_delete cflat_arena_delete
 #   define get_scratch_arena cflat_get_scratch_arena
 #   define scratch_arena_scope cflat_scratch_arena_scope
+#   define arena_scratch_scope cflat_scratch_arena_scope // Discoverability is a hell of a drug
+#   define scope_exit cflat_scope_exit
+#   define exit_scope cflat_scope_exit
 #   define temp_arena_scope cflat_temp_arena_scope
+#   define arena_temp_scope cflat_temp_arena_scope // Discoverability is a hell of a drug
 #   define arena_temp_begin cflat_arena_temp_begin
 #   define arena_temp_end cflat_arena_temp_end
 #   define Arena CflatArena

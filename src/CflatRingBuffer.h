@@ -17,18 +17,37 @@ typedef struct ring_buffer_new_opt {
 } RingBufferNewOpt;
 
 OpaqueRingBuffer *ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt);
+#define ring_buffer_new(TRb, a, length, ...) ring_buffer_new_opt(sizeof(TRb), a, length, (RingBufferNewOpt){__VA_ARGS__})
+
+typedef struct ring_buffer_init_opt {
+    bool clear;
+} RingBufferInitOpt;
+
+OpaqueRingBuffer *ring_buffer_init_opt(usize element_size, void *memory, usize length, RingBufferInitOpt opt);
+#define ring_buffer_init(TRb, mem, length, ...) (TRb*)ring_buffer_init_opt(sizeof(TRb), (mem), (length), ((RingBufferInitOpt){__VA_ARGS__}))
+
+#define ring_buffer_lit(TRb, length) cflat_padded_struct(TRb, (length)*cflat_sizeof_member(TRb, data[0]), .length=(length))
 
 bool (ring_buffer_is_empty)(OpaqueRingBuffer *rb);
+#define ring_buffer_is_empty(rb) ring_buffer_is_empty((void*)rb)
 
 usize (ring_buffer_count)(OpaqueRingBuffer *rb);
+#define ring_buffer_count(rb) ring_buffer_count((void*)rb)
 
 bool (ring_buffer_write)(usize element_size, OpaqueRingBuffer *rb, const void *src);
+#define ring_buffer_write(rb, src) ring_buffer_write(cflat_sizeof_member(OpaqueRingBuffer, data[0]), (void*)rb, cflat_plit(src))
 
 void (ring_buffer_overwrite)(usize element_size, OpaqueRingBuffer *rb, const void *src);
+#define ring_buffer_overwrite(rb, src) ring_buffer_overwrite(cflat_sizeof_member(OpaqueRingBuffer, data[0]), (void*)rb, cflat_plit(src))
 
 bool (ring_buffer_read)(usize element_size, OpaqueRingBuffer *rb, void *dst);
+#define ring_buffer_read(rb, dst) ring_buffer_read(cflat_sizeof_member(OpaqueRingBuffer, data[0]), (void*)rb, dst)
 
 void (ring_buffer_clear)(OpaqueRingBuffer *rb);
+#define ring_buffer_clear(rb) ring_buffer_clear((void*)rb)
+
+isize (ring_buffer_read_buffer)(usize element_size, OpaqueRingBuffer *rb, void *dst, isize count);
+#define ring_buffer_read_buffer(rb, dst, count) ring_buffer_read_buffer(cflat_sizeof_member(OpaqueRingBuffer, data[0]), (void*)rb, dst, count)
 
 #if defined(CFLAT_IMPLEMENTATION)
 
@@ -75,7 +94,7 @@ isize (ring_buffer_read_buffer)(usize element_size, OpaqueRingBuffer *rb, void *
     if (rb == NULL) return 0;
     
     isize written = 0;
-    while((written < count) && ring_buffer_read(element_size, rb, dst)) {
+    while((written < count) && (ring_buffer_read)(element_size, rb, dst)) {
         written += 1;
         if (dst) dst += element_size;
     }
@@ -93,7 +112,7 @@ bool (ring_buffer_write)(usize element_size, OpaqueRingBuffer *rb, const void *s
         return false;
     }
     
-    ring_buffer_write(element_size, rb, src);
+    (ring_buffer_write)(element_size, rb, src);
     return true;
 }
 

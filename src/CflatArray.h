@@ -12,7 +12,7 @@
     cflat_array_fields(T);                                                                                                          \
 }
 
-typedef cflat_define_array(byte) CflatOpaqueArray;
+typedef cflat_define_array(byte, cflat_opaque_array) CflatOpaqueArray;
 
 #define cflat_array_allocation_size(T, len) (sizeof(CflatOpaqueArray) + (len) * sizeof(T))
 
@@ -36,10 +36,10 @@ CFLAT_DEF CflatOpaqueArray* cflat_array_init_opt(usize element_size, void* memor
     (TArray*)cflat_array_init_opt(cflat_sizeof_member(TArray, data[0]), (arr), (len), ((CflatArrayInitOpt){__VA_ARGS__}))           \
 )
 
-#define cflat_array_lit(TArray, len) (                                                                                              \
-    cflat_padded_struct(TArray, (len)*cflat_sizeof_member(TArray, data[0]), .length=(len))                                          \
-)
+#define cflat_array_lit(TArray, len) cflat_padded_struct(TArray, (len)*cflat_sizeof_member(TArray, data[0]), .length=(len))
 
+#define cflat_array_at(array, index) (cflat_bounds_check((index), (array)->length), &(array)->data[(index)])
+#define cflat_array_get(array, index) (*(cflat_array_at((array), (index))))
 
 #if defined(CFLAT_IMPLEMENTATION)
 
@@ -71,6 +71,7 @@ CflatOpaqueArray* cflat_array_init_opt(const usize element_size, void* memory, c
 
 
 #ifndef CFLAT_ARRAY_NO_ALIAS
+
 #   define array_allocation_size cflat_array_allocation_size
 #   define array_new cflat_array_new
 #   define array_init cflat_array_init
@@ -78,6 +79,9 @@ CflatOpaqueArray* cflat_array_init_opt(const usize element_size, void* memory, c
 #   define define_array cflat_define_array
 #   define array_fields cflat_array_fields
 #   define array_lit cflat_array_lit
+#   define array_at cflat_array_at
+#   define array_get cflat_array_get
+
 #endif //CFLAT_ARRAY_NO_ALIAS
 
 #endif //CFLAT_ARRAY_H

@@ -28,7 +28,7 @@ void fast_fourier_transform_32_rec(const usize len, const usize channels, const 
         f32 bin = (f32)k/len;
         
         for (usize channel = 0; channel < channels; channel += 1) {
-            c32 oddexp = cexp(-2*I*clfat__pi32*bin) * out[k+len/2][channel];
+            c32 oddexp = cexp(-2*I*clfat_pi32*bin) * out[k+len/2][channel];
             c32 even   = out[k][channel];
             out[k][channel]       = even + oddexp;
             out[k+len/2][channel] = even - oddexp;
@@ -37,7 +37,6 @@ void fast_fourier_transform_32_rec(const usize len, const usize channels, const 
 }
 
 void fast_fourier_transform_f32(const usize fft_size, const usize channels, const f32 frames[fft_size][channels], c32 out[fft_size][channels]) {
-    clfat__pi32 = atan2f(1,1)*4;
     fast_fourier_transform_32_rec(fft_size, channels, 1, frames, out);    
 }
 
