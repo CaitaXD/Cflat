@@ -245,6 +245,28 @@ void test_hashset_resizing(void) {
     }
 }
 
+void test_hashset_tombstone_integrity(void) {
+    typedef cflat_define_hashset(int, int_hashset) IntHashSet;
+    IntHashSet *hs = cflat_hashset_new(IntHashSet, a, .capacity = 8);
+
+    // Assuming 'a' and 'b' will collide
+    int na = 10, nb = 18;
+    u64 hash_a = 2, hash_b = 2; 
+
+    cflat_hashset_add(a, hs, na, hash_a);
+    cflat_hashset_add(a, hs, nb, hash_b);
+
+    // Delete 'a' and verify 'b' is still findable
+    u64 idx;
+    cflat_hashset_index(hs, na, hash_a, &idx);
+    CflatHashSetOpaqueEntry *entry_a = cflat__hashset_get_entry(sizeof(int), (CflatOpaqueHashSet*)hs, idx);
+    entry_a->flags = CFLAT__HSE_DELETED;
+    hs->count--;
+
+    bool found_b = cflat_hashset_index(hs, nb, hash_b, &idx);
+    ASSERT_TRUE(found_b);
+}
+
 int main(void) {
     typedef void testfn(void);
     testfn *tests[] = {
@@ -263,6 +285,7 @@ int main(void) {
         array_new_should_work,
         test_hashset_basic_operations,
         test_hashset_resizing,
+        test_hashset_tombstone_integrity,
     };
 
     const usize test_count = CFLAT_ARRAY_SIZE(tests);
@@ -279,7 +302,6 @@ int main(void) {
             a = tmp.arena;
             tests[i]();
         }
-
     }
 
     arena_delete(cflat__tls_scratches[0]);
