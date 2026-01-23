@@ -72,7 +72,7 @@ CFLAT_DEF void cflat_arena_temp_end(CflatTempArena temp_arena);
     cflat_defer(TempArena CONCAT(_t, __LINE__) = cflat_arena_temp_begin((arena)), cflat_arena_temp_end(CONCAT(_t, __LINE__)))
 
 cflat_thread_local CflatArena *cflat__tls_scratches[2] = {0};
-cflat_thread_local usize cflat_tls_conflict_index = SIZE_MAX;
+cflat_thread_local usize cflat_tls_conflict_index = 0;
 
 CFLAT_DEF CflatTempArena cflat_get_scratch_arena_pool(CflatArena **pool, usize pool_len, CflatArena **conflicts, usize count);
 
@@ -402,7 +402,7 @@ void cflat_arena_clear(CflatArena *arena) {
     }
     arena->curr = NULL;
     freelst = arena->free;
-    freelst->pos = sizeof *freelst;
+    freelst->pos = sizeof(*freelst);
     arena->free = freelst->prev;
     cflat_ll_push(arena->curr, freelst, prev);
     arena->curr = freelst;
@@ -419,47 +419,11 @@ void cflat_arena_temp_end(const CflatTempArena temp_arena) {
     cflat_arena_set_pos(temp_arena.arena, temp_arena.pos);
 }
 
-cflat_thread_local static byte cflat__tls_arena_bytes[2][KiB(64)];
-
-// CflatTempArena cflat_get_scratch_arena_pool(CflatArena **pool, const usize pool_len, CflatArena **conflicts, const usize count) {
-//     CflatArena *result = NULL;
-//     CflatArena **arena_ptr = pool;
-//     for(u64 i = 0; i < pool_len; i += 1, arena_ptr += 1)
-//     {
-//         if (*arena_ptr == NULL || (*arena_ptr)->curr == NULL) {
-//             *arena_ptr = cflat_arena_init(
-//                 cflat__tls_arena_bytes[i],
-//                 sizeof(cflat__tls_arena_bytes[i])
-//             );
-//         }
-
-//         CflatArena **conflict_ptr = conflicts;
-//         bool has_conflict = false;
-//         for(u64 j = 0; j < count; j += 1, conflict_ptr += 1)
-//         {
-//             if(*arena_ptr == *conflict_ptr)
-//             {
-//                 has_conflict = true;
-//                 break;
-//             }
-//         }
-//         if(!has_conflict)
-//         {
-//             result = *arena_ptr;
-//             break;
-//         }
-//     }
-
-//     return cflat_arena_temp_begin(result);
-// }
-
 CflatTempArena cflat_get_scratch_arena(void) {
-    const usize pool_len = CFLAT_ARRAY_SIZE(cflat__tls_scratches);
-    const usize mask = pool_len - 1;
-    cflat_assert(cflat_is_pow2(pool_len));
-    const usize index = ++cflat_tls_conflict_index & mask;
+    cflat_thread_local static byte cflat__tls_arena_bytes[CFLAT_ARRAY_SIZE(cflat__tls_scratches)][KiB(64)];
+    const usize index = cflat_tls_conflict_index++ % CFLAT_ARRAY_SIZE(cflat__tls_scratches);
     CflatArena **arena_ptr = &cflat__tls_scratches[index];
-    if (*arena_ptr == NULL || (*arena_ptr)->curr == NULL) {
+    if (*arena_ptr == NULL || (*arena_ptr)->curr == NULL /* If for soime reason you called arena_delete on the thread local arena this will cath it */) {
         *arena_ptr = cflat_arena_init(cflat__tls_arena_bytes[index], sizeof(cflat__tls_arena_bytes[index]));
     }
     return cflat_arena_temp_begin(*arena_ptr);
