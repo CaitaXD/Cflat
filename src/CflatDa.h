@@ -52,15 +52,16 @@ typedef struct cflat_da_ensure_capacity_opt {
     bool clear;
 } CflatDaEnsureCapacityOpt;
 
-CFLAT_DEF CflatOpaqueDa* cflat_da_ensure_capacity_opt(usize element_size, CflatArena *a, void *da, usize capacity, CflatDaEnsureCapacityOpt opt);
+CFLAT_DEF CflatOpaqueDa* cflat_da_ensure_capacity_opt(usize element_size, CflatArena *a, CflatOpaqueDa *da, usize capacity, CflatDaEnsureCapacityOpt opt);
 
-#define cflat_da_ensure_capacity(da, capacity, ...)\
-    (cflat_typeof(da))cflat_da_ensure_capacity_opt(sizeof(*(da)->data), (da), (da), (capacity), OVERRIDE_INIT(CflatDaEnsureCapacityOpt, .align = cflat_alignof(*(da)->data), .clear = false, __VA_ARGS__))
+#define cflat_da_ensure_capacity(arena, da, capacity, ...)\
+    (cflat_typeof(da))\
+    cflat_da_ensure_capacity_opt(sizeof(*(da)->data), (arena), (void*)(da), (capacity), OVERRIDE_INIT(CflatDaEnsureCapacityOpt, .align = cflat_alignof(*(da)->data), .clear = false, __VA_ARGS__))
 
 #define cflat_arena_da_append(arena, da, value)                                                                                 \
     do {                                                                                                                        \
         CflatDaEnsureCapacityOpt opt = (CflatDaEnsureCapacityOpt) { .align = cflat_alignof(*(da)->data), .clear = false };      \
-        (da) = (void*)cflat_da_ensure_capacity_opt(sizeof *(da)->data, (arena), (da), (da)->count + 1, opt);                    \
+        (da) = (void*)cflat_da_ensure_capacity_opt(sizeof *(da)->data, (arena), (void*)(da), (da)->count + 1, opt);             \
         (da)->data[(da)->count++] = (value);                                                                                    \
     } while (0)
 
@@ -98,16 +99,13 @@ CflatOpaqueDa* cflat_da_clone_opt(const usize element_size, CflatArena *a, const
     return new_da;
 }
 
-CflatOpaqueDa* cflat_da_ensure_capacity_opt(usize element_size, CflatArena *a, void *da, usize capacity, CflatDaEnsureCapacityOpt opt) {
-    CflatOpaqueDa *p = da;
-    if (p == NULL) {
-        p = cflat_da_new_opt(element_size, a,                   (CflatDaNewOpt) { .capacity = capacity,             .align = opt.align, .clear = opt.clear });
-    } else if ((uptr)((uptr)a->curr + a->curr->pos) == (uptr)(p->data + element_size*p->capacity)) {
-        cflat_arena_push_opt(a, element_size*p->capacity,       (CflatAllocOpt) {                                   .align = 1,         .clear = opt.clear });
-    } else if (p->capacity < capacity) {
-        p = cflat_da_clone_opt(element_size, a, p,              (CflatDaNewOpt) { .capacity = next_pow2(capacity),  .align = opt.align, .clear = opt.clear });
-    }
-    return p;
+CflatOpaqueDa* cflat_da_ensure_capacity_opt(usize element_size, CflatArena *a, CflatOpaqueDa *da, usize capacity, CflatDaEnsureCapacityOpt opt) {
+    if (da->capacity >= capacity) return da;
+    
+    CflatAllocOpt aopt = { .align = opt.align, .clear = opt.clear };
+    CflatOpaqueDa *new_da = cflat_arena_extend_opt(a, da, sizeof(*da) + element_size*da->capacity, sizeof(*da) + element_size*da->capacity*2, aopt);
+    new_da->capacity *= 2;
+    return new_da;
 }
 
 #endif // CFLAT_IMPLEMENTATION

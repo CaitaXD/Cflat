@@ -2,11 +2,12 @@
 #define CFLAT_ARENA_H
 #include <assert.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "CflatCore.h"
 
 #define cflat_stackalloc(SIZE) ((void*)((byte[(SIZE)]){0}))
 
-#define CFLAT_DEFAULT_RESERVE_SIZE MiB(64)
+#define CFLAT_DEFAULT_RESERVE_SIZE KiB(64)
 #define CFLAT_DEFAULT_COMMIT_SIZE  KiB(4)
 
 typedef struct cflat_arena {
@@ -54,6 +55,15 @@ CFLAT_DEF void cflat_arena_pop(CflatArena *arena, usize size);
 CFLAT_DEF void cflat_arena_set_pos(CflatArena *arena, usize pos);
 CFLAT_DEF void cflat_arena_clear(CflatArena *arena);
 CFLAT_DEF void cflat_arena_delete(CflatArena *arena);
+CFLAT_DEF void* cflat_arena_top(CflatArena *arena);
+
+CFLAT_DEF bool cflat_arena_try_push_opt(CflatArena *arena, usize size, void **mem, CflatAllocOpt opt);
+
+#define cflat_arena_try_push(a, size, mem, ...) cflat_arena_try_push_opt((a), (size), (mem), OVERRIDE_INIT(CflatAllocOpt, .align = cflat_alignof(uptr), __VA_ARGS__))
+
+CFLAT_DEF void* cflat_arena_extend_opt(CflatArena *arena, void *ptr, usize oldsize, usize newsize, CflatAllocOpt opt);
+
+#define cflat_arena_extend(a, ptr, oldsize, newsize, ...) cflat_arena_extend_opt((a), (ptr), (oldsize), (newsize), OVERRIDE_INIT(CflatAllocOpt, .aling = cflat_alignof(uptr), __VA_ARGS__))
 
 CFLAT_DEF CflatTempArena cflat_arena_temp_begin(CflatArena *arena);
 CFLAT_DEF void cflat_arena_temp_end(CflatTempArena temp_arena);
@@ -61,21 +71,18 @@ CFLAT_DEF void cflat_arena_temp_end(CflatTempArena temp_arena);
 #define cflat_temp_arena_scope(arena)\
     cflat_defer(TempArena CONCAT(_t, __LINE__) = cflat_arena_temp_begin((arena)), cflat_arena_temp_end(CONCAT(_t, __LINE__)))
 
-cflat_thread_local CflatArena *cflat__tls_scratches[2];
+cflat_thread_local CflatArena *cflat__tls_scratches[2] = {0};
+cflat_thread_local usize cflat_tls_conflict_index = SIZE_MAX;
 
 CFLAT_DEF CflatTempArena cflat_get_scratch_arena_pool(CflatArena **pool, usize pool_len, CflatArena **conflicts, usize count);
 
 // ... (conflicts): Arena*[] | null
-#define cflat_get_scratch_arena(...) cflat_get_scratch_arena_pool(                                  \
-    cflat__tls_scratches,                                                                           \
-    CFLAT_ARRAY_SIZE(cflat__tls_scratches),                                                         \
-    ((CflatArena*[]){__VA_ARGS__}),                                                                 \
-    CFLAT_ARRAY_SIZE(((CflatArena*[]){__VA_ARGS__}))                                                \
-)
+CFLAT_DEF CflatTempArena cflat_get_scratch_arena(void);
 
 // tmp: TempArena
 // ... (conflicts): Arena*[] | null
-#define cflat_scratch_arena_scope(tmp, ...) cflat_defer(tmp = cflat_get_scratch_arena(__VA_ARGS__), cflat_arena_temp_end((tmp)))
+#define cflat_scratch_arena_scope(tmp)                                                              \
+    cflat_defer(tmp = cflat_get_scratch_arena(), cflat_dtop_scratch_arena((tmp)))                   \
 
 #define cflat_scope_exit continue
 
@@ -203,6 +210,7 @@ CflatArena* cflat_arena_new_opt(CflatArenaNewOpt opt) {
 
 void cflat_arena_delete(CflatArena *arena) {
     if (arena == NULL) return;
+    cflat_assert(arena->curr != NULL);
 
     CflatArenaNode *current = arena->curr;
     CflatArenaNode *node = arena->free;
@@ -238,8 +246,9 @@ void cflat_arena_delete(CflatArena *arena) {
 void* cflat_arena_push_opt(CflatArena *arena, const usize size, CflatAllocOpt opt) {
 
     if (arena == NULL) return NULL;
+    cflat_assert(arena->curr != NULL);
+    
     if(opt.align == 0) opt.align = cflat_alignof(uptr);
-
     CflatArenaNode *current_node = arena->curr;
     uptr pre = cflat_align_pow2(current_node->pos, opt.align);
     uptr pst = pre + size;
@@ -295,22 +304,55 @@ void* cflat_arena_push_opt(CflatArena *arena, const usize size, CflatAllocOpt op
         current_node->pos = pst;
         ASAN_UNPOISON_MEMORY_REGION(result, size);
         if (opt.clear) cflat_mem_zero(result, size);
-        arena->pos += pst - current_node->pos;
+        arena->pos += current_node->pos - sizeof(*current_node);
     }
 
     return result;
 }
 
+bool cflat_arena_try_push_opt(CflatArena *arena, usize size, void **mem, CflatAllocOpt opt) {
+    if (arena == NULL) return false;
+    cflat_assert(arena->curr != NULL);
+    cflat_assert(arena->curr->pos <= arena->curr->res);
+    if ((arena->curr->res - arena->curr->pos) >= size) {
+        void* result = cflat_arena_push_opt(arena, size, opt);
+        if (mem) *mem = result;
+        return true;
+    }
+    return false;
+}
+
+void* cflat_arena_extend_opt(CflatArena *arena, void *ptr, usize oldsize, usize newsize, CflatAllocOpt opt) {
+    
+    if (ptr == NULL) return cflat_arena_push_opt(arena, newsize, opt);
+
+    if (oldsize == newsize) return ptr;
+
+    if (newsize < oldsize) {
+        cflat_arena_pop(arena, oldsize - newsize);
+        return ptr;
+    }
+
+    if ((uptr)cflat_arena_top(arena) == ((uptr)ptr + oldsize)) {
+        if (cflat_arena_try_push_opt(arena, (newsize - oldsize), NULL, (CflatAllocOpt) { .align = 1, .clear = opt.clear })) {
+            return ptr;
+        }
+    }
+
+    void *result = cflat_arena_push_opt(arena, newsize, opt);
+    return cflat_mem_copy(result, ptr, oldsize);
+}
+
 void cflat_arena_pop(CflatArena *arena, usize size) {
     if (size == 0) return;
-    arena->pos -= size;
+    arena->pos = (arena->pos >= size) ? (arena->pos - size) : (0);
 
     CflatArenaNode *curr = arena->curr;
     while (curr) {
         CflatArenaNode *prev = curr->prev;
         const usize allocated = curr->pos - sizeof *curr;
         if (size <= allocated) {
-            curr->pos -= size;
+            curr->pos = (curr->pos >= size) ? (curr->pos - size) : (0);
             cflat__arena_node_poison_unused(curr);
             break;
         }
@@ -379,36 +421,57 @@ void cflat_arena_temp_end(const CflatTempArena temp_arena) {
 
 cflat_thread_local static byte cflat__tls_arena_bytes[2][KiB(64)];
 
-CflatTempArena cflat_get_scratch_arena_pool(CflatArena **pool, const usize pool_len, CflatArena **conflicts, const usize count) {
-    CflatArena *result = NULL;
-    CflatArena **arena_ptr = pool;
-    for(u64 i = 0; i < pool_len; i += 1, arena_ptr += 1)
-    {
-        if (*arena_ptr == NULL || (*arena_ptr)->curr == NULL) {
-            *arena_ptr = cflat_arena_init(
-                cflat__tls_arena_bytes[i],
-                sizeof(cflat__tls_arena_bytes[i])
-            );
-        }
+// CflatTempArena cflat_get_scratch_arena_pool(CflatArena **pool, const usize pool_len, CflatArena **conflicts, const usize count) {
+//     CflatArena *result = NULL;
+//     CflatArena **arena_ptr = pool;
+//     for(u64 i = 0; i < pool_len; i += 1, arena_ptr += 1)
+//     {
+//         if (*arena_ptr == NULL || (*arena_ptr)->curr == NULL) {
+//             *arena_ptr = cflat_arena_init(
+//                 cflat__tls_arena_bytes[i],
+//                 sizeof(cflat__tls_arena_bytes[i])
+//             );
+//         }
 
-        CflatArena **conflict_ptr = conflicts;
-        bool has_conflict = false;
-        for(u64 j = 0; j < count; j += 1, conflict_ptr += 1)
-        {
-            if(*arena_ptr == *conflict_ptr)
-            {
-                has_conflict = 1;
-                break;
-            }
-        }
-        if(!has_conflict)
-        {
-            result = *arena_ptr;
-            break;
-        }
+//         CflatArena **conflict_ptr = conflicts;
+//         bool has_conflict = false;
+//         for(u64 j = 0; j < count; j += 1, conflict_ptr += 1)
+//         {
+//             if(*arena_ptr == *conflict_ptr)
+//             {
+//                 has_conflict = true;
+//                 break;
+//             }
+//         }
+//         if(!has_conflict)
+//         {
+//             result = *arena_ptr;
+//             break;
+//         }
+//     }
+
+//     return cflat_arena_temp_begin(result);
+// }
+
+CflatTempArena cflat_get_scratch_arena(void) {
+    const usize pool_len = CFLAT_ARRAY_SIZE(cflat__tls_scratches);
+    const usize mask = pool_len - 1;
+    cflat_assert(cflat_is_pow2(pool_len));
+    const usize index = ++cflat_tls_conflict_index & mask;
+    CflatArena **arena_ptr = &cflat__tls_scratches[index];
+    if (*arena_ptr == NULL || (*arena_ptr)->curr == NULL) {
+        *arena_ptr = cflat_arena_init(cflat__tls_arena_bytes[index], sizeof(cflat__tls_arena_bytes[index]));
     }
+    return cflat_arena_temp_begin(*arena_ptr);
+}
 
-    return cflat_arena_temp_begin(result);
+void cflat_dtop_scratch_arena(const CflatTempArena temp_arena) {
+    cflat_arena_temp_end(temp_arena);
+    cflat_tls_conflict_index -= 1;
+}
+
+void* cflat_arena_top(CflatArena *arena) {
+    return (void*)((uptr)arena->curr + arena->curr->pos);
 }
 
 #endif //CFLAT_IMPLEMENTATION
@@ -423,10 +486,12 @@ CflatTempArena cflat_get_scratch_arena_pool(CflatArena **pool, const usize pool_
 #   define arena_init cflat_arena_init
 #   define arena_new cflat_arena_new
 #   define arena_push cflat_arena_push
+#   define arena_try_push cflat_arena_try_push
 #   define arena_pop cflat_arena_pop
 #   define arena_clear cflat_arena_clear
 #   define arena_set_pos cflat_arena_set_pos
 #   define arena_delete cflat_arena_delete
+#   define arena_top cflat_arena_top
 #   define get_scratch_arena cflat_get_scratch_arena
 #   define scratch_arena_scope cflat_scratch_arena_scope
 #   define arena_scratch_scope cflat_scratch_arena_scope // Discoverability is a hell of a drug

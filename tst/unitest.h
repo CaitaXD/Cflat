@@ -9,12 +9,13 @@
         fprintf(stderr, "Assertion Failed ("#a " "#OP" " #e")\n");                                  \
         fprintf(stderr, "Expected: " ARG_FMT" "ENCLOSE_EXP(e)"\n", e);                              \
         fprintf(stderr, "Actual: " ARG_FMT" "ENCLOSE_EXP(a)"\n", a);                                \
+        cflat_trap();                                                                               \
         exit(1);                                                                                    \
     }                                                                                               \
 } while (0)
 
 #define ASSERT_TRUE(e) ASSERT_BINARY_PREDICATE(e, true, ==, "%d")
-#define ASSERT_FALSE(e) ASSERT_BINARY_PREDICATE(e, true, ==, "%d")
+#define ASSERT_FALSE(e) ASSERT_BINARY_PREDICATE(e, false, ==, "%d")
 
 #define ASSERT_EQUAL(a, e, ARG_FMT) ASSERT_BINARY_PREDICATE(a, e, ==, ARG_FMT)
 #define ASSERT_NOT_EQUAL(a,e, ARG_FMT) ASSERT_BINARY_PREDICATE(a, e, !=, ARG_FMT)

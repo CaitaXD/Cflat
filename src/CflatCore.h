@@ -58,14 +58,26 @@ typedef SSIZE_T ssize_t;
 
 #if !defined(cflat_assert)
 #   include <assert.h>
+# if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+#   define cflat_assert(e) __extension__  ({                \
+    if (!(e)) {                                             \
+        fprintf(stderr, "Assertion Failed ");               \
+        puts(#e);                                           \
+        cflat_trap();                                       \
+    }                                                       \
+})
+# else
 #   define cflat_assert assert
+# endif
 #endif
 #if C23_OR_GREATER
 #   define cflat_typeof typeof
 #   define cflat_alignof alignof
+#   define cflat_alignas alignas
 #else
 #   define cflat_typeof __typeof__
-#   define cflat_alignof(T) __alignof__(T)
+#   define cflat_alignas _Alignas
+#   define cflat_alignof __alignof__
 #endif
 #if COMPILER_MSVC
 #   if defined(__SANITIZE_ADDRESS__)
@@ -119,7 +131,7 @@ typedef SSIZE_T ssize_t;
     u64: cflat_prev_pow2_u64                \
 )(x)
 
-#define cflat_sizeof_member(T, member) sizeof ((T*)0)->member
+#define cflat_sizeof_member(T, member) sizeof(((T*)0)->member)
 #define cflat_static_assert(e) (void)sizeof(struct {char _; static_assert (e, ""); })
 
 #define CFLAT_ARRAY_SIZE(XS) (sizeof((XS))/sizeof((XS)[0]))
@@ -160,6 +172,7 @@ typedef SSIZE_T ssize_t;
 #include <string.h>
 #include <stdlib.h>
 #define cflat_mem_copy memcpy
+#define cflat_mem_move memmove
 #define cflat_mem_zero(mem, len) memset(mem, 0, len)
 
 #define cflat_lit(LITERAL) (*((cflat_typeof(LITERAL)[1]) {LITERAL}))
@@ -422,6 +435,17 @@ u64 (cflat_prev_pow2_u64)(u64 x)
     x |= x >> 16;
     x |= x >> 32;
     return x - (x >> 1);
+}
+
+u64 cflat_log2_u64(u64 x) {
+    static const i32 tab64[64] = {
+        63,  0, 58,  1, 59, 47, 53,  2, 60, 39, 48, 27, 54, 33, 42,  3,
+        61, 51, 37, 40, 49, 18, 28, 20, 55, 30, 34, 11, 43, 14, 22,  4,
+        62, 57, 46, 52, 38, 26, 32, 41, 50, 36, 17, 19, 29, 10, 13, 21,
+        56, 45, 25, 31, 35, 16,  9, 12, 44, 24, 15,  8, 23,  7,  6,  5
+    };
+    const u64 DeBruijnSeq_64 = 0x07EDD5E59A4E28C2ULL;
+    return tab64[(x * DeBruijnSeq_64) >> 58];
 }
 
 #endif // CFLAT_IMPLEMENTATION

@@ -1,3 +1,4 @@
+#include <minwindef.h>
 #include <stdio.h>
 #define DEBUG 1
 
@@ -79,13 +80,20 @@ void dealloc_should_offset_len(void) {
 
 void pop_should_free_blocks(void) {
     // Arrange
-    const usize prev_cap = a->curr->res;
+    usize freelist_count = 0;
+    for (const CflatArenaNode *curr = a->free; curr; curr = curr->prev) {
+        freelist_count += 1;
+    }
     // Act
     arena_push(a, a->curr->res, 1, true);
     arena_pop(a, a->curr->res);
+    usize new_freelist_count = 0;
+    for (const CflatArenaNode *curr = a->free; curr; curr = curr->prev) {
+        new_freelist_count += 1;
+    }
     // Assert
-    ASSERT_EQUAL(a->curr->res, prev_cap, "%zu");
-    ASSERT_NOT_NULL(a->curr);
+    ASSERT_NOT_NULL(a->free);
+    ASSERT_GREATER_THAN(new_freelist_count, freelist_count, "%zu");
 }
 
 void arena_da_append_should_work(void) {
@@ -179,6 +187,64 @@ void array_new_should_work(void) {
     }
 }
 
+u64 mock_hash(u64 val) {
+    return val * 11400714819323198485ULL;
+}
+
+void test_hashset_basic_operations(void) {
+    
+    typedef cflat_define_hashset(int, int_hashset) IntHashSet;
+    IntHashSet *hs = cflat_hashset_new(IntHashSet, a, .capacity = 4);
+    
+    ASSERT_NOT_NULL(hs);
+    ASSERT_EQUAL(hs->count, (usize)0, "%zu");
+
+    // Test Adding Elements
+    int val1 = 42;
+    u64 hash1 = mock_hash(val1);
+    bool added = cflat_hashset_add(a, hs, val1, hash1);
+    
+    ASSERT_TRUE(added);
+    ASSERT_EQUAL(hs->count, (usize)1, "%zu");
+
+    // Test Duplicates (should return false)
+    bool added_again = cflat_hashset_add(a, hs, val1, hash1);
+    ASSERT_FALSE(added_again);
+    ASSERT_EQUAL(hs->count, (usize)1, "%zu");
+
+    // Test Lookup
+    u64 index;
+    bool found = cflat_hashset_index(hs, val1, hash1, &index);
+    ASSERT_TRUE(found);
+    
+    int val2 = 100;
+    bool found_missing = cflat_hashset_index(hs, val2, mock_hash(val2), &index);
+    ASSERT_FALSE(found_missing);
+}
+
+void test_hashset_resizing(void) {
+    const usize initial_capacity = 2;
+    const usize N  = 10;
+    typedef cflat_define_hashset(u64, u64_hashset) U64HashSet;
+    U64HashSet *hs = cflat_hashset_new(U64HashSet, a, .capacity = initial_capacity);
+    
+    usize original_exponent = hs->exponent;
+
+    // Add elements until it resizes (Load factor 0.75)
+    for (u64 i = 0; i < N; ++i) {
+        cflat_hashset_add(a, hs, i, mock_hash(i));
+    }
+
+    ASSERT_GREATER_THAN(hs->exponent, original_exponent, "%zu");
+    ASSERT_EQUAL(hs->count, (usize)N, "%zu");
+
+    for (u64 i = 0; i < N; ++i) {
+        u64 idx;
+        bool found = cflat_hashset_index(hs, i, mock_hash(i), &idx);
+        ASSERT_TRUE(found);
+    }
+}
+
 int main(void) {
     typedef void testfn(void);
     testfn *tests[] = {
@@ -195,6 +261,8 @@ int main(void) {
         da_alloc_jagged_array_leak_test,
         array_init_should_work,
         array_new_should_work,
+        test_hashset_basic_operations,
+        test_hashset_resizing,
     };
 
     const usize test_count = CFLAT_ARRAY_SIZE(tests);
@@ -207,10 +275,11 @@ int main(void) {
 
     for (usize i = 0; i < test_count; ++i) {
         TempArena tmp;
-        scratch_arena_scope(tmp, 0) {
+        scratch_arena_scope(tmp) {
             a = tmp.arena;
             tests[i]();
         }
+
     }
 
     arena_delete(cflat__tls_scratches[0]);

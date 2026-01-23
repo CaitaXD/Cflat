@@ -139,7 +139,7 @@ CflatMatrix* (cflat__dfa_new)(CflatArena *a, CflatStringView pattern) {
 isize cflat_sv_find_index_sv(CflatStringView string, CflatStringView substring) {
     usize index = -1;
     CflatTempArena scratch;
-    arena_scratch_scope(scratch, 0) {
+    arena_scratch_scope(scratch) {
         CflatMatrix *dfa = cflat__dfa_new(scratch.arena, substring);
         byte (*transitions)[dfa->rows][dfa->columns] = (void*)dfa->data;
         
@@ -164,7 +164,7 @@ isize cflat_sv_find_index_sb(CflatStringView string, CflatStringBuilder *substri
 isize cflat_sv_find_last_index_sv(CflatStringView string, CflatStringView substring) {
     usize index = -1;
     CflatTempArena scratch;
-    arena_scratch_scope(scratch, 0) {
+    arena_scratch_scope(scratch) {
         CflatMatrix *dfa = cflat__dfa_new(scratch.arena, substring);
         byte (*transitions)[dfa->rows][dfa->columns] = (void*)dfa->data;
         
