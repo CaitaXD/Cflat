@@ -4,56 +4,56 @@
 #include "CflatCore.h"
 #include "CflatArena.h"
 
-typedef struct opaque_ring_buffer {
+typedef struct cflat_impl_ring_buffer {
     isize read;
     isize write;
     usize mask;
     byte data[];
-} OpaqueRingBuffer;
+} CflatImplRingBuffer;
 
 typedef struct ring_buffer_new_opt {
     usize align;
     bool clear;
 } RingBufferNewOpt;
 
-OpaqueRingBuffer *ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt);
+CflatImplRingBuffer *ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt);
 #define ring_buffer_new(TRb, a, length, ...) ring_buffer_new_opt(sizeof(TRb), a, length, (RingBufferNewOpt){__VA_ARGS__})
 
 typedef struct ring_buffer_init_opt {
     bool clear;
 } RingBufferInitOpt;
 
-OpaqueRingBuffer *ring_buffer_init_opt(usize element_size, void *memory, usize length, RingBufferInitOpt opt);
+CflatImplRingBuffer *ring_buffer_init_opt(usize element_size, void *memory, usize length, RingBufferInitOpt opt);
 #define ring_buffer_init(TRb, mem, length, ...) (TRb*)ring_buffer_init_opt(sizeof(TRb), (mem), (length), ((RingBufferInitOpt){__VA_ARGS__}))
 
 #define ring_buffer_lit(TRb, length) cflat_padded_struct(TRb, (length)*cflat_sizeof_member(TRb, data[0]), .length=(length))
 
-bool (ring_buffer_is_empty)(OpaqueRingBuffer *rb);
+bool (ring_buffer_is_empty)(CflatImplRingBuffer *rb);
 #define ring_buffer_is_empty(rb) ring_buffer_is_empty((void*)rb)
 
-usize (ring_buffer_count)(OpaqueRingBuffer *rb);
+usize (ring_buffer_count)(CflatImplRingBuffer *rb);
 #define ring_buffer_count(rb) ring_buffer_count((void*)rb)
 
-bool (ring_buffer_write)(usize element_size, OpaqueRingBuffer *rb, const void *src);
-#define ring_buffer_write(rb, src) ring_buffer_write(cflat_sizeof_member(OpaqueRingBuffer, data[0]), (void*)rb, cflat_plit(src))
+bool (ring_buffer_write)(usize element_size, CflatImplRingBuffer *rb, const void *src);
+#define ring_buffer_write(rb, src) ring_buffer_write(cflat_sizeof_member(CflatImplRingBuffer, data[0]), (void*)rb, cflat_plit(src))
 
-void (ring_buffer_overwrite)(usize element_size, OpaqueRingBuffer *rb, const void *src);
-#define ring_buffer_overwrite(rb, src) ring_buffer_overwrite(cflat_sizeof_member(OpaqueRingBuffer, data[0]), (void*)rb, cflat_plit(src))
+void (ring_buffer_overwrite)(usize element_size, CflatImplRingBuffer *rb, const void *src);
+#define ring_buffer_overwrite(rb, src) ring_buffer_overwrite(cflat_sizeof_member(CflatImplRingBuffer, data[0]), (void*)rb, cflat_plit(src))
 
-bool (ring_buffer_read)(usize element_size, OpaqueRingBuffer *rb, void *dst);
-#define ring_buffer_read(rb, dst) ring_buffer_read(cflat_sizeof_member(OpaqueRingBuffer, data[0]), (void*)rb, dst)
+bool (ring_buffer_read)(usize element_size, CflatImplRingBuffer *rb, void *dst);
+#define ring_buffer_read(rb, dst) ring_buffer_read(cflat_sizeof_member(CflatImplRingBuffer, data[0]), (void*)rb, dst)
 
-void (ring_buffer_clear)(OpaqueRingBuffer *rb);
+void (ring_buffer_clear)(CflatImplRingBuffer *rb);
 #define ring_buffer_clear(rb) ring_buffer_clear((void*)rb)
 
-isize (ring_buffer_read_buffer)(usize element_size, OpaqueRingBuffer *rb, void *dst, isize count);
-#define ring_buffer_read_buffer(rb, dst, count) ring_buffer_read_buffer(cflat_sizeof_member(OpaqueRingBuffer, data[0]), (void*)rb, dst, count)
+isize (ring_buffer_read_buffer)(usize element_size, CflatImplRingBuffer *rb, void *dst, isize count);
+#define ring_buffer_read_buffer(rb, dst, count) ring_buffer_read_buffer(cflat_sizeof_member(CflatImplRingBuffer, data[0]), (void*)rb, dst, count)
 
 #if defined(CFLAT_IMPLEMENTATION)
 
-OpaqueRingBuffer *ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt) {
+CflatImplRingBuffer *ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt) {
     
-    OpaqueRingBuffer *rb = cflat_arena_push_opt(a, length * element_size + sizeof(OpaqueRingBuffer), (CflatAllocOpt) {
+    CflatImplRingBuffer *rb = cflat_arena_push_opt(a, length * element_size + sizeof(CflatImplRingBuffer), (CflatAllocOpt) {
         .align = opt.align,
         .clear = opt.clear,
     });
@@ -63,7 +63,7 @@ OpaqueRingBuffer *ring_buffer_new_opt(usize element_size, Arena *a, usize length
     return rb;
 }
 
-bool (ring_buffer_is_empty)(OpaqueRingBuffer *rb) {
+bool (ring_buffer_is_empty)(CflatImplRingBuffer *rb) {
     
     if (rb == NULL) return true;
     
@@ -73,7 +73,7 @@ bool (ring_buffer_is_empty)(OpaqueRingBuffer *rb) {
     return read == write;
 }
 
-bool (ring_buffer_read)(usize element_size, OpaqueRingBuffer *rb, void *dst) {
+bool (ring_buffer_read)(usize element_size, CflatImplRingBuffer *rb, void *dst) {
     
     if (rb == NULL) return false;
     
@@ -90,7 +90,7 @@ bool (ring_buffer_read)(usize element_size, OpaqueRingBuffer *rb, void *dst) {
     return true;
 }
 
-isize (ring_buffer_read_buffer)(usize element_size, OpaqueRingBuffer *rb, void *dst, isize count) {
+isize (ring_buffer_read_buffer)(usize element_size, CflatImplRingBuffer *rb, void *dst, isize count) {
     if (rb == NULL) return 0;
     
     isize written = 0;
@@ -102,7 +102,7 @@ isize (ring_buffer_read_buffer)(usize element_size, OpaqueRingBuffer *rb, void *
     return written;
 }
 
-bool (ring_buffer_write)(usize element_size, OpaqueRingBuffer *rb, const void *src) {
+bool (ring_buffer_write)(usize element_size, CflatImplRingBuffer *rb, const void *src) {
     
     if (rb == NULL) return false;
 
@@ -116,7 +116,7 @@ bool (ring_buffer_write)(usize element_size, OpaqueRingBuffer *rb, const void *s
     return true;
 }
 
-void (ring_buffer_overwrite)(usize element_size, OpaqueRingBuffer *rb, const void *src) {
+void (ring_buffer_overwrite)(usize element_size, CflatImplRingBuffer *rb, const void *src) {
     
     if (rb == NULL) return;
 
@@ -135,11 +135,11 @@ void (ring_buffer_overwrite)(usize element_size, OpaqueRingBuffer *rb, const voi
     rb->read = read;
 }
 
-void (ring_buffer_clear)(OpaqueRingBuffer *rb) {
+void (ring_buffer_clear)(CflatImplRingBuffer *rb) {
     rb->read = rb->write = 0;
 }
 
-usize (ring_buffer_count)(OpaqueRingBuffer *rb) {
+usize (ring_buffer_count)(CflatImplRingBuffer *rb) {
     
     if (rb == NULL) return 0;
     

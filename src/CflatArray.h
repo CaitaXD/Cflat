@@ -12,9 +12,9 @@
     cflat_array_fields(T);                                                                                                          \
 }
 
-typedef cflat_define_array(byte, cflat_opaque_array) CflatOpaqueArray;
+typedef cflat_define_array(byte, cflat_impl_array) CflatImplArray;
 
-#define cflat_array_allocation_size(T, len) (sizeof(CflatOpaqueArray) + (len) * sizeof(T))
+#define cflat_array_allocation_size(T, len) (sizeof(CflatImplArray) + (len) * sizeof(T))
 
 typedef struct cflat_array_new_opt {
     usize align;
@@ -25,8 +25,8 @@ typedef struct cflat_array_init_opt {
     bool clear;
 } CflatArrayInitOpt;
 
-CFLAT_DEF CflatOpaqueArray* cflat_array_new_opt(usize element_size, usize length, CflatArena *a, CflatArrayNewOpt opt);
-CFLAT_DEF CflatOpaqueArray* cflat_array_init_opt(usize element_size, void* memory, usize length, CflatArrayInitOpt opt);
+CFLAT_DEF CflatImplArray* cflat_array_new_opt(usize element_size, usize length, CflatArena *a, CflatArrayNewOpt opt);
+CFLAT_DEF CflatImplArray* cflat_array_init_opt(usize element_size, void* memory, usize length, CflatArrayInitOpt opt);
 
 #define cflat_array_new(TArray, size, arena, ...) (                                                                                 \
     (TArray*)cflat_array_new_opt(cflat_sizeof_member(TArray, data[0]), (size), (arena), ((CflatArrayNewOpt) {__VA_ARGS__}))         \
@@ -43,10 +43,10 @@ CFLAT_DEF CflatOpaqueArray* cflat_array_init_opt(usize element_size, void* memor
 
 #if defined(CFLAT_IMPLEMENTATION)
 
-CflatOpaqueArray* cflat_array_new_opt(const usize element_size, const usize length, CflatArena *a, CflatArrayNewOpt opt) {
-    const usize byte_size = length * element_size + sizeof(CflatOpaqueArray);
+CflatImplArray* cflat_array_new_opt(const usize element_size, const usize length, CflatArena *a, CflatArrayNewOpt opt) {
+    const usize byte_size = length * element_size + sizeof(CflatImplArray);
     
-    CflatOpaqueArray *arr = cflat_arena_push_opt(a, byte_size, (CflatAllocOpt) {
+    CflatImplArray *arr = cflat_arena_push_opt(a, byte_size, (CflatAllocOpt) {
             .align = opt.align,
             .clear = opt.clear,
     });
@@ -55,13 +55,13 @@ CflatOpaqueArray* cflat_array_new_opt(const usize element_size, const usize leng
     return arr;
 }
 
-static CflatOpaqueArray *const cflat_array_empty = &(CflatOpaqueArray){0};
+static CflatImplArray *const cflat_array_empty = &(CflatImplArray){0};
 
-CflatOpaqueArray* cflat_array_init_opt(const usize element_size, void* memory, const usize length, CflatArrayInitOpt opt) {
+CflatImplArray* cflat_array_init_opt(const usize element_size, void* memory, const usize length, CflatArrayInitOpt opt) {
     if (memory == NULL) {
         return cflat_array_empty;
     }
-    CflatOpaqueArray *array = memory;
+    CflatImplArray *array = memory;
     array->length = length;
     if (opt.clear) cflat_mem_zero(array->data, array->length*element_size);
     return array;

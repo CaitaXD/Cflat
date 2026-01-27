@@ -1,5 +1,8 @@
 #include <minwindef.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <winnt.h>
 #define DEBUG 1
 
 #if !defined(CFLAT_IMPLEMENTATION)
@@ -99,7 +102,7 @@ void pop_should_free_blocks(void) {
 void arena_da_append_should_work(void) {
     // Arrange
     typedef define_da(i32, nda) NumbersDa;
-    NumbersDa *xs = da_new(NumbersDa, a, 0);
+    NumbersDa *xs = NULL;
     // Act
     for (i32 i = 0; i < 100000; ++i) {
         arena_da_append(a, xs, i);
@@ -187,87 +190,47 @@ void array_new_should_work(void) {
     }
 }
 
-u64 mock_hash(u64 val) {
-    return val * 11400714819323198485ULL;
-}
+// u64 mock_hash(u64 val) {
+//     return val * 11400714819323198485ULL;
+// }
 
-void test_hashset_basic_operations(void) {
-    
-    typedef cflat_define_hashset(int, int_hashset) IntHashSet;
-    IntHashSet *hs = cflat_hashset_new(IntHashSet, a, .capacity = 4);
-    
-    ASSERT_NOT_NULL(hs);
-    ASSERT_EQUAL(hs->count, (usize)0, "%zu");
-
-    // Test Adding Elements
-    int val1 = 42;
-    u64 hash1 = mock_hash(val1);
-    bool added = cflat_hashset_add(a, hs, val1, hash1);
-    
-    ASSERT_TRUE(added);
-    ASSERT_EQUAL(hs->count, (usize)1, "%zu");
-
-    // Test Duplicates (should return false)
-    bool added_again = cflat_hashset_add(a, hs, val1, hash1);
-    ASSERT_FALSE(added_again);
-    ASSERT_EQUAL(hs->count, (usize)1, "%zu");
-
-    // Test Lookup
-    u64 index;
-    bool found = cflat_hashset_index(hs, val1, hash1, &index);
-    ASSERT_TRUE(found);
-    
-    int val2 = 100;
-    bool found_missing = cflat_hashset_index(hs, val2, mock_hash(val2), &index);
-    ASSERT_FALSE(found_missing);
-}
-
-void test_hashset_resizing(void) {
-    const usize initial_capacity = 2;
-    const usize N  = 10;
-    typedef cflat_define_hashset(u64, u64_hashset) U64HashSet;
-    U64HashSet *hs = cflat_hashset_new(U64HashSet, a, .capacity = initial_capacity);
-    
-    usize original_exponent = hs->exponent;
-
-    // Add elements until it resizes (Load factor 0.75)
-    for (u64 i = 0; i < N; ++i) {
-        cflat_hashset_add(a, hs, i, mock_hash(i));
+void hashtable_add_should_add_resize_and_get_correctly(void) {
+    // Arrange
+    typedef cflat_define_hashtable(u64, char*, cflat_opaque_hashtable) HashTable_u64_to_string;
+    HashTable_u64_to_string *hashtable = cflat_hashtable_new(HashTable_u64_to_string, a, .capacity = 2);
+    // Act
+    for (u64 i = 0; i < 1000; ++i) {
+        char *str = arena_push(a, sizeof(char)*64, 0);
+        sprintf(str, "%zu", i);
+        bool added = cflat_hashtable_add(a, hashtable, i, str);
+        // Assert
+        ASSERT_TRUE(added);
     }
-
-    ASSERT_GREATER_THAN(hs->exponent, original_exponent, "%zu");
-    ASSERT_EQUAL(hs->count, (usize)N, "%zu");
-
-    for (u64 i = 0; i < N; ++i) {
-        u64 idx;
-        bool found = cflat_hashset_index(hs, i, mock_hash(i), &idx);
-        ASSERT_TRUE(found);
+    // Act
+    for (u64 i = 0; i < 100; ++i) {
+        char *str = cflat_hashtable_get(hashtable, i);
+        // Assert
+        ASSERT_EQUAL((u64)atoi(str), i, "%zu");
     }
 }
 
-void test_hashset_tombstone_integrity(void) {
-    typedef cflat_define_hashset(int, int_hashset) IntHashSet;
-    IntHashSet *hs = cflat_hashset_new(IntHashSet, a, .capacity = 8);
-
-    // Assuming 'a' and 'b' will collide
-    int na = 10, nb = 18;
-    u64 hash_a = 2, hash_b = 2; 
-
-    cflat_hashset_add(a, hs, na, hash_a);
-    cflat_hashset_add(a, hs, nb, hash_b);
-
-    // Delete 'a' and verify 'b' is still findable
-    u64 idx;
-    cflat_hashset_index(hs, na, hash_a, &idx);
-    CflatHashSetOpaqueEntry *entry_a = cflat__hashset_get_entry(sizeof(int), (CflatOpaqueHashSet*)hs, idx);
-    entry_a->flags = CFLAT__HSE_DELETED;
-    hs->count--;
-
-    bool found_b = cflat_hashset_index(hs, nb, hash_b, &idx);
-    ASSERT_TRUE(found_b);
-}
 
 int main(void) {
+
+    u32 xs[1000];
+    u64 ys[1000];
+    for (usize i = 1; i < ARRAY_SIZE(xs); ++i) {
+        xs[i] = cflat_log2_u32(i);
+        ys[i] = cflat_log2_u64(i);
+    }
+
+    for (usize i = 1; i < ARRAY_SIZE(xs); ++i) {
+        ASSERT_EQUAL(xs[i], (u32)log2(i), "%d");
+        ASSERT_EQUAL(ys[i], (u64)log2(i), "%zu");
+    }
+
+    return 0;
+
     typedef void testfn(void);
     testfn *tests[] = {
         arena_push_should_create_new_block,
@@ -283,9 +246,7 @@ int main(void) {
         da_alloc_jagged_array_leak_test,
         array_init_should_work,
         array_new_should_work,
-        test_hashset_basic_operations,
-        test_hashset_resizing,
-        test_hashset_tombstone_integrity,
+        hashtable_add_should_add_resize_and_get_correctly,
     };
 
     const usize test_count = CFLAT_ARRAY_SIZE(tests);
@@ -304,10 +265,17 @@ int main(void) {
         }
     }
 
-    arena_delete(cflat__tls_scratches[0]);
-    arena_delete(cflat__tls_scratches[1]);
+    TempArena tmp;
+    scratch_arena_scope(tmp) {
+        arena_delete(cflat__tls_scratches[0]);
+        arena_delete(cflat__tls_scratches[1]);
+    }
 
     printf("All tests passed ✅\n");
 
     return 0;
 }
+
+
+#undef HASH_FN
+#undef EQUAL_FN

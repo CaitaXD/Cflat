@@ -12,14 +12,14 @@
     cflat_slice_fields(T);                                                                      \
 }
 
-typedef cflat_define_slice(void, cflat_opaque_slice) CflatOpaqueSlice;
+typedef cflat_define_slice(void, cflat_impl_slice) CflatImplSlice;
 
 typedef struct cflat_slice_new_opt {
     usize align;
     bool clear;
 } CflatSliceNewOpt;
 
-CFLAT_DEF CflatOpaqueSlice cflat_slice_new_opt(usize element_size, usize length, CflatArena *a, CflatSliceNewOpt opt);
+CFLAT_DEF CflatImplSlice cflat_slice_new_opt(usize element_size, usize length, CflatArena *a, CflatSliceNewOpt opt);
 
 #define cflat_slice_new(TSlice, size, arena, ...) (                                                                              \
     *(TSlice*)cflat_slice_new_opt(cflat_sizeof_member(TSlice, data[0]), (size), (arena), ((CflatSliceNewOpt) {__VA_ARGS__}))     \
@@ -36,36 +36,36 @@ CFLAT_DEF CflatOpaqueSlice cflat_slice_new_opt(usize element_size, usize length,
 #define cflat_slice_at(slice, index) (cflat_bounds_check((index), (slice)->length), &(slice)->data[(index)])
 #define cflat_slice_get(slice, index) (*(cflat_slice_at((slice), (index))))
 
-CFLAT_DEF CflatOpaqueSlice (cflat_slice)(usize element_size, CflatOpaqueSlice slice, isize offset, isize length);
+CFLAT_DEF CflatImplSlice (cflat_slice)(usize element_size, CflatImplSlice slice, isize offset, isize length);
 
-#define cflat_slice(slice, offset, len) (                                                       \
-    *(cflat_typeof((slice))*) &cflat_lit((cflat_slice)(sizeof (slice).data,                     \
-        ((CflatOpaqueSlice){.data=(slice).data,.length=(slice).length}),                        \
-        (offset),                                                                               \
-        (len))                                                                                  \
-    )                                                                                           \
-)
+#define cflat_slice(slice, offset, len) (                                                                     \
+    *(cflat_typeof((slice))*)                                                                                 \
+    &cflat_lvalue(CflatImplSlice,                                                                             \
+                  (cflat_slice)(sizeof(slice).data,                                                           \
+                                ((CflatImplSlice){.data=(slice).data,.length=(slice).length}),                \
+                                (offset),                                                                     \
+                                (len))))                                                                      \
 
 #define cflat_slice_skip(slice, skip) cflat_slice((slice), (skip), (slice).length-(skip))
-#define cflat_slice_take(slice, take) cflat_slice(slice, 0, (take))
+#define cflat_slice_take(slice, take) cflat_slice((slice), 0, (take))
 
 #if defined(CFLAT_IMPLEMENTATION)
 
-CflatOpaqueSlice (cflat_slice)(const usize element_size,
-    const CflatOpaqueSlice slice, const isize offset, const isize length) {
+CflatImplSlice (cflat_slice)(const usize element_size,
+    const CflatImplSlice slice, const isize offset, const isize length) {
     usize u_offset = offset;
     usize u_len = length;
 
     if (offset < 0) u_offset = slice.length + offset;
     if (length < 0) u_len = slice.length + length;
 
-    return (CflatOpaqueSlice) {
+    return (CflatImplSlice) {
         .data = (byte*)slice.data + u_offset*element_size,
         .length = u_len
     };
 }
 
-CflatOpaqueSlice cflat_slice_new_opt(usize element_size, usize length, CflatArena *a, CflatSliceNewOpt opt) {
+CflatImplSlice cflat_slice_new_opt(usize element_size, usize length, CflatArena *a, CflatSliceNewOpt opt) {
     
     const usize byte_size = length * element_size;
     void *data = cflat_arena_push_opt(a, byte_size, (CflatAllocOpt) {
@@ -73,7 +73,7 @@ CflatOpaqueSlice cflat_slice_new_opt(usize element_size, usize length, CflatAren
             .clear = opt.clear,
     });
 
-    return (CflatOpaqueSlice) {
+    return (CflatImplSlice) {
         .data = data,
         .length = length
     };

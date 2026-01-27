@@ -10,8 +10,8 @@
 #include <stddef.h>
 
 typedef cflat_define_da   (char, cflat_string_builder) CflatStringBuilder;
-typedef cflat_define_array(char, cflat_string        )  CflatString;
-typedef cflat_define_slice(char, cflat_string_view   )  CflatStringView;
+typedef cflat_define_array(char, cflat_string        ) CflatString;
+typedef cflat_define_slice(char, cflat_string_view   ) CflatStringView;
 
 #define CFLAT__STRING_OVERLOAD(str, func) _Generic((str)                            \
     , char*:                        func##_cstr                                     \
@@ -22,6 +22,14 @@ typedef cflat_define_slice(char, cflat_string_view   )  CflatStringView;
     , const CflatStringBuilder*:    func##_sb                                       \
     , CflatStringView:              func##_sv                                       \
 )
+
+#define cflat_str_lit(STR)                                                                                                \
+    container_of(                                                                                                         \
+        cflat_mem_copy(cflat_padded_struct(CflatString, sizeof(STR), .length = sizeof(STR) - 1).data, STR, sizeof(STR)), \
+        CflatString,                                                                                                      \
+        data)
+
+#define cflat_sv_lit(STR) (CflatStringView) { .data = (STR), .length = sizeof(STR) - 1 }
 
 CFLAT_DEF CflatStringView cflat_sv_from_cstr(const char         *cstr);
 CFLAT_DEF CflatStringView cflat_sv_from_str (CflatString        *str );
@@ -245,6 +253,7 @@ CflatStringView cflat_path_name_sb   (CflatStringBuilder *path) { return cflat_p
 
 
 #if !defined(CFLAT_STRING_NO_ALIAS)
+#   define str_lit cflat_str_lit
 #   define sv_lit cflat_sv_lit
 #   define sv_from cflat_sv_from
 #   define str_clone cflat_str_clone

@@ -6,9 +6,11 @@
 #define ASSERT_BINARY_PREDICATE(a, e, OP, ARG_FMT) do {                                             \
     if (((a) OP (e)) == false) {                                                                    \
         fprintf(stderr, "%s [%s:%d]\n", __func__, __FILE__, __LINE__);                              \
-        fprintf(stderr, "Assertion Failed ("#a " "#OP" " #e")\n");                                  \
-        fprintf(stderr, "Expected: " ARG_FMT" "ENCLOSE_EXP(e)"\n", e);                              \
-        fprintf(stderr, "Actual: " ARG_FMT" "ENCLOSE_EXP(a)"\n", a);                                \
+        fputs("Assertion Failed ("#a " "#OP" " #e")", stderr);                                      \
+        fprintf(stderr, "Expected: " ARG_FMT, e);                                                   \
+        fputs(ENCLOSE_EXP(e), stderr);                                                              \
+        fprintf(stderr, "Actual: " ARG_FMT, a);                                                     \
+        fputs(ENCLOSE_EXP(a), stderr);                                                              \
         cflat_trap();                                                                               \
         exit(1);                                                                                    \
     }                                                                                               \
