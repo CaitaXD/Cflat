@@ -7,9 +7,9 @@
     if (((a) OP (e)) == false) {                                                                    \
         fprintf(stderr, "%s [%s:%d]\n", __func__, __FILE__, __LINE__);                              \
         fputs("Assertion Failed ("#a " "#OP" " #e")", stderr);                                      \
-        fprintf(stderr, "Expected: " ARG_FMT, e);                                                   \
+        fprintf(stderr, "\nExpected: " ARG_FMT " ", e);                                             \
         fputs(ENCLOSE_EXP(e), stderr);                                                              \
-        fprintf(stderr, "Actual: " ARG_FMT, a);                                                     \
+        fprintf(stderr, "\nActual: " ARG_FMT " ", a);                                               \
         fputs(ENCLOSE_EXP(a), stderr);                                                              \
         cflat_trap();                                                                               \
         exit(1);                                                                                    \

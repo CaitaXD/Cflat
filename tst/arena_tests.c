@@ -101,30 +101,12 @@ void pop_should_free_blocks(void) {
 
 void arena_da_append_should_work(void) {
     // Arrange
-    typedef define_da(i32, nda) NumbersDa;
-    NumbersDa *xs = NULL;
+    slice(i32) *xs = &slice_new(i32, a, 0);
     // Act
     for (i32 i = 0; i < 100000; ++i) {
-        arena_da_append(a, xs, i);
+        slice_append(a, *xs, i);
         // Assert
-        ASSERT_EQUAL(xs->data[i], i, "%d");
-    }
-}
-
-void da_clone_should_work(void) {
-    // Arrange
-    typedef define_da(i32, nda) NumbersDa;
-    NumbersDa *xs = da_lit(NumbersDa, 100000);
-    const isize len = 100000;
-    for (i32 i = 0; i < len; ++i) {
-        arena_da_append(a, xs, i);
-    }
-    // Act
-    const NumbersDa *ys = da_clone(a, xs, 0);
-    // Assert
-    ASSERT_EQUAL(xs->count, ys->count, "%zu");
-    for (i32 i = 0; i < len; ++i) {
-        ASSERT_EQUAL(ys->data[i], i, "%d");
+        ASSERT_EQUAL(slice_data(*xs)[i], i, "%d");
     }
 }
 
@@ -137,57 +119,19 @@ void arena_delete_wont_free_stack_memory(void) {
     // Assert
 }
 
-void da_alloc_jagged_array_leak_test(void) {
+void subslice_should_work(void) {\
     // Arrange
-    typedef define_da(i32, nda) NumbersDa;
-    typedef define_da(NumbersDa*, pnda) JaggedDa;
-    JaggedDa *xs = da_new(JaggedDa, a, 0);
+    slice(i32) xs = {0};
+    slice_append(a, xs, 1);
+    slice_append(a, xs, 2);
+    slice_append(a, xs, 3);
+    slice_append(a, xs, 4);
     // Act
-    arena_da_append(a, xs, da_new(NumbersDa, a, 0));
-    arena_da_append(a, xs, da_new(NumbersDa, a, 0));
-    arena_da_append(a, da_get(xs, 0), 2);
-    arena_da_append(a, da_get(xs, 0), 4);
-    arena_da_append(a, da_get(xs, 1), 3);
+    slice(i32) *sub = &subslice(xs, 1, 2);
     // Assert
-    ASSERT_EQUAL(da_get(da_get(xs, 0), 0), 2, "%d");
-    ASSERT_EQUAL(da_get(da_get(xs, 0), 1), 4, "%d");
-    ASSERT_EQUAL(da_get(da_get(xs, 1), 0), 3, "%d");
-}
-
-void array_init_should_work(void) {
-    // Arrange
-    typedef define_array(i32, nda) NumbersArray;
-    const usize len = 100000;
-    void *stackp = stackalloc(array_allocation_size(i32, 100000));
-    NumbersArray *xs = array_init(NumbersArray, stackp, len, 0);
-    // Act
-    for (u32 i = 0; i < xs->length; ++i) {
-        xs->data[i] = (i32) i;
-    }
-    // Assert
-    ASSERT_NOT_NULL(xs);
-    ASSERT_EQUAL(xs->length, (usize)len, "%zu");
-    for (u32 i = 0; i < xs->length; ++i) {
-        ASSERT_EQUAL(xs->data[i], (i32)i, "%d");
-    }
-}
-
-void array_new_should_work(void) {
-    // Arrange
-    typedef define_array(i32, nda) NumbersArray;
-    const usize len = 100000;
-    NumbersArray *xs = array_new(NumbersArray, len, a, 0);
-    assert(xs);
-    // Act
-    for (u32 i = 0; i < xs->length; ++i) {
-        xs->data[i] = (i32) i;
-    }
-    // Assert
-    ASSERT_NOT_NULL(xs);
-    ASSERT_EQUAL(xs->length, (usize)len, "%zu");
-    for (u32 i = 0; i < xs->length; ++i) {
-        ASSERT_EQUAL(xs->data[i], (i32)i, "%d");
-    }
+    ASSERT_EQUAL(slice_length(*sub),  2ULL, "%zu");
+    ASSERT_EQUAL(slice_data(*sub)[0], 2, "%d");
+    ASSERT_EQUAL(slice_data(*sub)[1], 3, "%d");
 }
 
 // u64 mock_hash(u64 val) {
@@ -217,20 +161,6 @@ void hashtable_add_should_add_resize_and_get_correctly(void) {
 
 int main(void) {
 
-    u32 xs[1000];
-    u64 ys[1000];
-    for (usize i = 1; i < ARRAY_SIZE(xs); ++i) {
-        xs[i] = cflat_log2_u32(i);
-        ys[i] = cflat_log2_u64(i);
-    }
-
-    for (usize i = 1; i < ARRAY_SIZE(xs); ++i) {
-        ASSERT_EQUAL(xs[i], (u32)log2(i), "%d");
-        ASSERT_EQUAL(ys[i], (u64)log2(i), "%zu");
-    }
-
-    return 0;
-
     typedef void testfn(void);
     testfn *tests[] = {
         arena_push_should_create_new_block,
@@ -241,12 +171,9 @@ int main(void) {
         dealloc_should_offset_len,
         pop_should_free_blocks,
         arena_da_append_should_work,
-        da_clone_should_work,
         arena_delete_wont_free_stack_memory,
-        da_alloc_jagged_array_leak_test,
-        array_init_should_work,
-        array_new_should_work,
         hashtable_add_should_add_resize_and_get_correctly,
+        subslice_should_work,
     };
 
     const usize test_count = CFLAT_ARRAY_SIZE(tests);

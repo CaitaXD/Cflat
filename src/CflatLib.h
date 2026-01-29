@@ -12,7 +12,6 @@ typedef void(CflatProcedure)(void);
 #define CflatOsHandleIsValid(OS_HANDLE) ((OS_HANDLE) != 0)
 
 CFLAT_DEF CflatOsHandle cflat_lib_open_cstr(const char *path);
-CFLAT_DEF CflatOsHandle cflat_lib_open_str (CflatString *path);
 
 #define cflat_lib_open(path) _Generic((path)    \
     , void*:            cflat_lib_open_cstr     \
@@ -21,7 +20,6 @@ CFLAT_DEF CflatOsHandle cflat_lib_open_str (CflatString *path);
 )((path))
 
 CFLAT_DEF CflatProcedure* cflat_load_symbol_cstr(CflatOsHandle lib, const char *name);
-CFLAT_DEF CflatProcedure* cflat_load_symbol_str (CflatOsHandle lib, CflatString *name);
 
 #define cflat_load_symbol(lib, name) _Generic((name)    \
     , void*:            cflat_load_symbol_cstr     \
@@ -68,16 +66,8 @@ CflatOsHandle cflat_lib_open_cstr(const char *path) {
     return lib;
 }
 
-CflatOsHandle cflat_lib_open_str(CflatString *path) {
-    return cflat_lib_open_cstr(path->data);
-}
-
 CflatProcedure* cflat_load_symbol_cstr(CflatOsHandle lib, const char *name) {
     return (CflatProcedure*)GetProcAddress((HMODULE)lib, name);
-}
-
-CflatProcedure* cflat_load_symbol_str(CflatOsHandle lib, CflatString *name) {
-    return (CflatProcedure*)GetProcAddress((HMODULE)lib, name->data);
 }
 
 

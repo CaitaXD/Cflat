@@ -4,22 +4,19 @@
 #include "CflatArena.h"
 #include "CflatCore.h"
 #include "CflatDa.h"
-#include "CflatArray.h"
 #include "CflatSlice.h"
 #include <limits.h>
 #include <stddef.h>
 
-typedef cflat_define_da   (char, cflat_string_builder) CflatStringBuilder;
-typedef cflat_define_array(char, cflat_string        ) CflatString;
-typedef cflat_define_slice(char, cflat_string_view   ) CflatStringView;
+typedef struct cflat_string_view {
+    char *data;
+    usize length;
+    usize capacity;
+} CflatStringView;
 
 #define CFLAT__STRING_OVERLOAD(str, func) _Generic((str)                            \
     , char*:                        func##_cstr                                     \
     , const char*:                  func##_cstr                                     \
-    , CflatString*:                 func##_str                                      \
-    , const CflatString*:           func##_str                                      \
-    , CflatStringBuilder*:          func##_sb                                       \
-    , const CflatStringBuilder*:    func##_sb                                       \
     , CflatStringView:              func##_sv                                       \
 )
 
@@ -32,84 +29,58 @@ typedef cflat_define_slice(char, cflat_string_view   ) CflatStringView;
 #define cflat_sv_lit(STR) (CflatStringView) { .data = (STR), .length = sizeof(STR) - 1 }
 
 CFLAT_DEF CflatStringView cflat_sv_from_cstr(const char         *cstr);
-CFLAT_DEF CflatStringView cflat_sv_from_str (CflatString        *str );
-CFLAT_DEF CflatStringView cflat_sv_from_sb  (CflatStringBuilder *sb  );
 CFLAT_DEF CflatStringView cflat_sv_from_sv  (CflatStringView     sv  );
 
 #define cflat_sv_from(str) CFLAT__STRING_OVERLOAD((str), cflat_sv_from)((str))
 
-CFLAT_DEF CflatString *cflat_str_clone_cstr(CflatArena *a, const char         *cstr);
-CFLAT_DEF CflatString *cflat_str_clone_str (CflatArena *a, CflatString        *str );
-CFLAT_DEF CflatString *cflat_str_clone_sb  (CflatArena *a, CflatStringBuilder *sb  );
-CFLAT_DEF CflatString *cflat_str_clone_sv  (CflatArena *a, CflatStringView     sv  );
+CFLAT_DEF CflatStringView cflat_sv_clone_cstr(CflatArena *a, const char         *cstr);
+CFLAT_DEF CflatStringView cflat_sv_clone_sv  (CflatArena *a, CflatStringView     sv  );
 
-#define cflat_str_clone(a, str) CFLAT__STRING_OVERLOAD((str), cflat_str_clone)((a), (str))
+#define cflat_sv_clone(a, str) CFLAT__STRING_OVERLOAD((str), cflat_sv_clone)((a), (str))
 
 CFLAT_DEF CflatStringView cflat_sv_find_substring_cstr(CflatStringView strnig, const char         *substring);
-CFLAT_DEF CflatStringView cflat_sv_find_substring_str (CflatStringView strnig, CflatString        *substring);
-CFLAT_DEF CflatStringView cflat_sv_find_substring_sb  (CflatStringView strnig, CflatStringBuilder *substring);
 CFLAT_DEF CflatStringView cflat_sv_find_substring_sv  (CflatStringView strnig, CflatStringView     substring);
 
 #define cflat_sv_find_substring(strnig, substring) CFLAT__STRING_OVERLOAD((substring), cflat_sv_find_substring)((strnig), (substring))
 
 CFLAT_DEF isize cflat_sv_find_index_cstr(CflatStringView strnig, const char *substring        );
-CFLAT_DEF isize cflat_sv_find_index_str (CflatStringView strnig, CflatString *substring       );
 CFLAT_DEF isize cflat_sv_find_index_sv  (CflatStringView strnig, CflatStringView substring    );
-CFLAT_DEF isize cflat_sv_find_index_sb  (CflatStringView strnig, CflatStringBuilder *substring);
 
 #define cflat_sv_find_index(strnig, substring) CFLAT__STRING_OVERLOAD((substring), cflat_sv_find_index)((strnig), (substring))
 
 CFLAT_DEF isize cflat_sv_find_last_index_cstr(CflatStringView strnig, const char *substring        );
-CFLAT_DEF isize cflat_sv_find_last_index_str (CflatStringView strnig, CflatString *substring       );
 CFLAT_DEF isize cflat_sv_find_last_index_sv  (CflatStringView strnig, CflatStringView substring    );
-CFLAT_DEF isize cflat_sv_find_last_index_sb  (CflatStringView strnig, CflatStringBuilder *substring);
 
 #define cflat_sv_find_last_index(strnig, substring) CFLAT__STRING_OVERLOAD((substring), cflat_sv_find_last_index)((strnig), (substring))
 
 CFLAT_DEF CflatStringView cflat_path_name_cstr(const char         *path);
-CFLAT_DEF CflatStringView cflat_path_name_str (CflatString        *path);
-CFLAT_DEF CflatStringView cflat_path_name_sb  (CflatStringBuilder *path);
 CFLAT_DEF CflatStringView cflat_path_name_sv  (CflatStringView     path);
 
 #define cflat_path_name(path) CFLAT__STRING_OVERLOAD((path), cflat_path_name)((path))
 
 #if defined(CFLAT_IMPLEMENTATION)
 
-CflatStringView cflat_sv_from_cstr(const char       *cstr) { return (CflatStringView) { .data = (char*)cstr, .length = strlen(cstr) }; }
-CflatStringView cflat_sv_from_str (CflatString       *str) { return (CflatStringView) { .data = str->data, .length = str->length };    }
-CflatStringView cflat_sv_from_sb (CflatStringBuilder *sb)  { return (CflatStringView) { .data = sb->data, .length = sb->count };       }
-CflatStringView cflat_sv_from_sv (CflatStringView     sv)  { return sv;                                                                }
+CflatStringView cflat_sv_from_cstr(const char       *cstr)  { return (CflatStringView) { .data = (char*)cstr, .length = strlen(cstr) }; }
+CflatStringView cflat_sv_from_sv  (CflatStringView     sv)  { return sv;                                                                }
 
-CflatString *cflat_str_clone_cstr(CflatArena *a, const char *cstr) {
-    const usize cstrlen = strlen(cstr);
-    CflatString *result = arena_push(a, sizeof(CflatString) + cstrlen + 1, 0);
-    result->length = cstrlen;
-    cflat_mem_copy(result->data, cstr, cstrlen);
-    result->data[cstrlen] = '\0';
+CflatStringView cflat_sv_clone_cstr(CflatArena *a, const char *cstr) {
+    const usize len = strlen(cstr);
+    CflatStringView result = (CflatStringView) {
+        .data = arena_push(a, sizeof(char)*len + 1, .align = cflat_alignof(char), .clear = false),
+        .length = len
+    };
+    cflat_mem_copy(result.data, cstr, len);
+    result.data[len] = '\0';
     return result;
 }
 
-CflatString *cflat_str_clone_sv(CflatArena *a, CflatStringView sv) {
-    CflatString *result = arena_push(a, sizeof(CflatString) + sv.length + 1, 0);
-    result->length = sv.length;
-    cflat_mem_copy(result->data, sv.data, sv.length);
-    result->data[sv.length] = '\0';
-    return result;
-}
-
-CflatString *cflat_str_clone_str(CflatArena *a, CflatString *str) {
-    CflatString *result = arena_push(a, sizeof(CflatString) + str->length + 1, 0);
-    result->length = str->length;
-    cflat_mem_copy(result->data, str->data, str->length);
-    result->data[str->length] = '\0';
-    return result;
-}
-
-CflatString *cflat_str_clone_sb(CflatArena *a, CflatStringBuilder *sb) {
-    CflatString *result = arena_push(a, sizeof(CflatString) + sb->count + 1, 0);
-    result->length = sb->count;
-    cflat_mem_copy(result->data, sb->data, sb->count);
-    result->data[sb->count] = '\0';
+CflatStringView cflat_sv_clone_sv(CflatArena *a, CflatStringView sv) {
+    CflatStringView result = (CflatStringView) {
+        .data = arena_push(a, sizeof(char)*sv.length + 1, .align = cflat_alignof(char), .clear = false),
+        .length = sv.length
+    };
+    cflat_mem_copy(result.data, sv.data, sv.length);
+    result.data[sv.length] = '\0';
     return result;
 }
 
@@ -166,8 +137,6 @@ isize cflat_sv_find_index_sv(CflatStringView string, CflatStringView substring) 
 }
 
 isize cflat_sv_find_index_cstr(CflatStringView string, const char *substring)       { return cflat_sv_find_index_sv(string, cflat_sv_from_cstr(substring)); }
-isize cflat_sv_find_index_str(CflatStringView string, CflatString *substring)       { return cflat_sv_find_index_sv(string, cflat_sv_from_str(substring));  }
-isize cflat_sv_find_index_sb(CflatStringView string, CflatStringBuilder *substring) { return cflat_sv_find_index_sv(string, cflat_sv_from_sb(substring));   }
 
 isize cflat_sv_find_last_index_sv(CflatStringView string, CflatStringView substring) {
     usize index = -1;
@@ -188,8 +157,6 @@ isize cflat_sv_find_last_index_sv(CflatStringView string, CflatStringView substr
 }
 
 isize cflat_sv_find_last_index_cstr(CflatStringView string, const char *substring)         { return cflat_sv_find_last_index_sv(string, cflat_sv_from_cstr(substring)); }
-isize cflat_sv_find_last_index_str (CflatStringView string, CflatString *substring)        { return cflat_sv_find_last_index_sv(string, cflat_sv_from_str(substring));  }
-isize cflat_sv_find_last_index_sb  (CflatStringView string, CflatStringBuilder *substring) { return cflat_sv_find_last_index_sv(string, cflat_sv_from_sb(substring));   }
 
 CflatStringView cflat_sv_find_substring_sv(CflatStringView string, CflatStringView substring) {
     isize index = cflat_sv_find_index_sv(cflat_sv_from_sv(string), cflat_sv_from_sv(substring));
@@ -202,24 +169,6 @@ CflatStringView cflat_sv_find_substring_sv(CflatStringView string, CflatStringVi
 
 CflatStringView cflat_sv_find_substring_cstr(CflatStringView string, const char *substring) {
     isize index = cflat_sv_find_index_sv(cflat_sv_from_sv(string), cflat_sv_from_cstr(substring));
-    if (index < 0) return (CflatStringView){0};
-    return (CflatStringView) {
-        .data = string.data + index,
-        .length = string.length - index
-    };
-}
-
-CflatStringView cflat_sv_find_substring_str(CflatStringView string, CflatString *substring) {
-    isize index = cflat_sv_find_index_sv(cflat_sv_from_sv(string), cflat_sv_from_str(substring));
-    if (index < 0) return (CflatStringView){0};
-    return (CflatStringView) {
-        .data = string.data + index,
-        .length = string.length - index
-    };
-}
-
-CflatStringView cflat_sv_find_substring_sb(CflatStringView string, CflatStringBuilder *substring) {
-    isize index = cflat_sv_find_index_sv(cflat_sv_from_sv(string), cflat_sv_from_sb(substring));
     if (index < 0) return (CflatStringView){0};
     return (CflatStringView) {
         .data = string.data + index,
@@ -245,9 +194,7 @@ CflatStringView cflat_path_name_sv(CflatStringView path) {
 #endif // _WIN32
 }
 
-CflatStringView cflat_path_name_str  (CflatString *path)        { return cflat_path_name_sv(cflat_sv_from_str(path));  }
 CflatStringView cflat_path_name_cstr (const char *path)         { return cflat_path_name_sv(cflat_sv_from_cstr(path)); }
-CflatStringView cflat_path_name_sb   (CflatStringBuilder *path) { return cflat_path_name_sv(cflat_sv_from_sb(path));   }
 
 #endif // CFLAT_IMPLEMENTATION
 
@@ -256,7 +203,7 @@ CflatStringView cflat_path_name_sb   (CflatStringBuilder *path) { return cflat_p
 #   define str_lit cflat_str_lit
 #   define sv_lit cflat_sv_lit
 #   define sv_from cflat_sv_from
-#   define str_clone cflat_str_clone
+#   define sv_clone cflat_sv_clone
 #   define sv_find_substring cflat_sv_find_substring
 #   define sv_find_index cflat_sv_find_index
 #   define path_name cflat_path_name
