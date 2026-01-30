@@ -18,11 +18,13 @@ typedef struct cflat_slice_new_opt {
     bool clear;
 } CflatSliceNewOpt;
 
-#define cflat_slice(T) cflat_typeof( T ( *[3] ) (CflatSliceStruct) )
+#define CFLAT_SLICE_FNPTR_COUNT(T) (sizeof(CflatSliceStruct) > sizeof(T ( * ) (CflatSliceStruct))) ?  (sizeof(CflatSliceStruct) / sizeof(T ( * ) (CflatSliceStruct))) : 1
 
-#define cflat_slice_element_type(SLICE)    cflat_typeof( (* (SLICE) ) ( (CflatSliceStruct){0} ) )
+#define cflat_slice(T) cflat_typeof( T ( *[ CFLAT_SLICE_FNPTR_COUNT(T) ] ) (CflatSliceStruct) )
 
-#define cflat_slice_member(SLICE, MEMBER)  ( (CflatSliceStruct*) (SLICE) )->MEMBER
+#define cflat_slice_element_type(SLICE) cflat_typeof( (* (SLICE) ) ( (CflatSliceStruct){0} ) )
+
+#define cflat_slice_member(SLICE, MEMBER) ( (CflatSliceStruct*) (SLICE) )->MEMBER
 
 #define cflat_slice_element_size(SLICE)    sizeof( cflat_slice_element_type(SLICE) )
 #define cflat_slice_element_align(SLICE)   cflat_alignof( cflat_slice_element_type(SLICE) )
