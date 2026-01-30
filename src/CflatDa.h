@@ -19,7 +19,7 @@ typedef struct cflat_resize_opt {
 
 #define cflat_slice_append(arena, da, value)                                                                                                                        \
     do {                                                                                                                                                            \
-        CflatResizeOpt resize_opt = (CflatResizeOpt) { .align = cflat_alignof(cflat_typeof((da).data[0])), .clear = false };                                        \
+        CflatResizeOpt resize_opt = (CflatResizeOpt) { .align = cflat_alignofexp((da).data[0]), .clear = false };                                                   \
         CflatByteSlice *byte_slice = (void*)&(da);                                                                                                                  \
         *byte_slice = cflat__slice_resize_opt(sizeof((da).data[0]), (arena), *byte_slice, byte_slice->length + 1, resize_opt);                                      \
         (da).data[byte_slice->length++] = (value);                                                                                                                  \

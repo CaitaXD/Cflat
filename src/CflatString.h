@@ -42,7 +42,14 @@ CFLAT_DEF CflatStringView cflat_path_name_sv           (CflatStringView path    
 
 #if defined(CFLAT_IMPLEMENTATION)
 
-CflatStringView cflat_sv_from_cstr(const char       *cstr)  { return (CflatStringView) { .data = (char*)cstr, .length = strlen(cstr) }; }
+CflatStringView cflat_sv_from_cstr(const char *cstr)  { 
+    const usize len = strlen(cstr);
+    return (CflatStringView) { 
+        .data     = (void*)cstr, 
+        .length   = len, 
+        .capacity = len + 1
+    };
+ };
 
 CflatStringView cflat_sv_clone_cstr(CflatArena *a, const char *cstr) {
     const usize len = strlen(cstr);
