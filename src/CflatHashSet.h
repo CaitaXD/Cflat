@@ -13,7 +13,7 @@ cflat_enum(HashTableEntryFlag, u64) {
     CFLAT__HASH_ENTRY_DELETED    = 2,
 };
 
-#define cflat_hashtable_fields(TKey, TValue)    \
+#define CFLAT_HASHTABLE_FIELDS(TKey, TValue)    \
     usize exponent;                             \
     usize count;                                \
     HashTableEntryFlag *flags;                  \
@@ -21,15 +21,12 @@ cflat_enum(HashTableEntryFlag, u64) {
     TKey   *keys;                               \
     TValue *values                              \
 
-#define cflat_hashset_fields(TValue)            \
+#define CFLAT_HASHSET_FIELDS(TValue)            \
     usize exponent;                             \
     usize count;                                \
     HashTableEntryFlag *flags;                  \
     u64    *hashes;                             \
     TValue *values                              \
-
-#define cflat_define_hashtable(TKey, TValue, ...) struct __VA_ARGS__ { cflat_hashtable_fields(TKey, TValue); }
-#define cflat_define_hashset(TValue, ...)         struct __VA_ARGS__ { cflat_hashset_fields(TValue); }
 
 typedef struct cflat_impl_hashtable {
     usize exponent;

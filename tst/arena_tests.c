@@ -17,6 +17,10 @@ typedef struct {
     CFLAT_SLICE_FIELDS(i32);
 } i32Slice;
 
+typedef struct {
+    CFLAT_HASHTABLE_FIELDS(u64, char*);
+} HashTable_u64_to_string;
+
 Arena *a;
 
 void arena_push_should_create_new_block(void) {
@@ -145,7 +149,6 @@ void subslice_should_work(void) {\
 
 void hashtable_add_should_add_resize_and_get_correctly(void) {
     // Arrange
-    typedef cflat_define_hashtable(u64, char*, cflat_opaque_hashtable) HashTable_u64_to_string;
     HashTable_u64_to_string *hashtable = cflat_hashtable_new(HashTable_u64_to_string, a, .capacity = 2);
     // Act
     for (u64 i = 0; i < 1000; ++i) {
