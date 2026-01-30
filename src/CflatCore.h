@@ -149,6 +149,14 @@ typedef SSIZE_T ssize_t;
 #define CFLAT_ROW_SIZE(XS) CFLAT_ARRAY_SIZE(XS)
 #define CFLAT_COL_SIZE(XS) (sizeof((XS))/sizeof((XS)[0][0]) / CFLAT_ROW_SIZE(XS))
 
+/*
+
++============================================================================+
+|                                Macros                                      |
++============================================================================+
+
+*/
+
 #if defined(C23_OR_GREATER)
 #   define cflat_typeof typeof
 #   define cflat_alignof alignof
@@ -165,16 +173,10 @@ typedef SSIZE_T ssize_t;
 #   define cflat_enum(ENUM_NAME, ENUM_TYPE) typedef ENUM_TYPE ENUM_NAME; enum
 #endif
 
-/*
-
-+============================================================================+
-|                                Macros                                      |
-+============================================================================+
-
-*/
-
-#define cflat_sizeof_member(T, member) sizeof(((T*)0)->member)
-#define cflat_typeof_member(T, member) cflat_typeof(((T*)0)->member)
+#define cflat_alignofexp(EXP) cflat_alignof(cflat_typeof(EXP))
+#define cflat_sizeof_member(T, member)  sizeof       ( ( (T*) 0)->member             )
+#define cflat_typeof_member(T, member)  cflat_typeof ( ( (T*) 0)->member             )
+#define cflat_alignof_member(T, member) cflat_alignof(cflat_typeof_member(T, member) )
 
 #define cflat_min(A,B) (((A)<(B))?(A):(B))
 #define cflat_max(A,B) (((A)>(B))?(A):(B))

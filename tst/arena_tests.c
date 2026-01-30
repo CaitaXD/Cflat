@@ -13,6 +13,10 @@
 #include "../src/Cflat.h"
 #include "unitest.h"
 
+typedef struct {
+    CFLAT_SLICE_FIELDS(i32);
+} i32Slice;
+
 Arena *a;
 
 void arena_push_should_create_new_block(void) {
@@ -101,12 +105,12 @@ void pop_should_free_blocks(void) {
 
 void arena_da_append_should_work(void) {
     // Arrange
-    slice(i32) *xs = &slice_new(i32, a, 0);
+    i32Slice xs = slice_new(xs, a, 0, .clear = false);
     // Act
     for (i32 i = 0; i < 100000; ++i) {
-        slice_append(a, *xs, i);
+        slice_append(a, xs, i);
         // Assert
-        ASSERT_EQUAL(slice_data(*xs)[i], i, "%d");
+        ASSERT_EQUAL(slice_data(xs)[i], i, "%d");
     }
 }
 
@@ -121,17 +125,18 @@ void arena_delete_wont_free_stack_memory(void) {
 
 void subslice_should_work(void) {\
     // Arrange
-    slice(i32) xs = {0};
+    i32Slice xs = {0};
     slice_append(a, xs, 1);
     slice_append(a, xs, 2);
     slice_append(a, xs, 3);
     slice_append(a, xs, 4);
     // Act
-    slice(i32) *sub = &subslice(xs, 1, 2);
+    i32Slice sub;
+    mem_copy(&sub, &subslice(xs, 1, 2), sizeof(sub));
     // Assert
-    ASSERT_EQUAL(slice_length(*sub),  2ULL, "%zu");
-    ASSERT_EQUAL(slice_data(*sub)[0], 2, "%d");
-    ASSERT_EQUAL(slice_data(*sub)[1], 3, "%d");
+    ASSERT_EQUAL(slice_length(sub),  2ULL, "%zu");
+    ASSERT_EQUAL(slice_data(sub)[0], 2, "%d");
+    ASSERT_EQUAL(slice_data(sub)[1], 3, "%d");
 }
 
 // u64 mock_hash(u64 val) {

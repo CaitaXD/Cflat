@@ -19,21 +19,21 @@ typedef struct cflat_resize_opt {
 
 #define cflat_slice_append(arena, da, value)                                                                                                                        \
     do {                                                                                                                                                            \
-        CflatResizeOpt opt = (CflatResizeOpt) { .align = cflat_slice_element_align((da)), .clear = false };                                                         \
-        CflatSliceStruct *impl = (void*)(da);                                                                                                                         \
-        *impl = cflat__slice_resize_opt(cflat_slice_element_size((da)), (arena), *impl, impl->length + 1, opt);                                                     \
-        cflat_slice_data((da))[impl->length++] = (value);                                                                                                           \
+        CflatResizeOpt resize_opt = (CflatResizeOpt) { .align = cflat_alignof(cflat_typeof((da).data[0])), .clear = false };                                        \
+        CflatByteSlice *byte_slice = (void*)&(da);                                                                                                                  \
+        *byte_slice = cflat__slice_resize_opt(sizeof((da).data[0]), (arena), *byte_slice, byte_slice->length + 1, resize_opt);                                      \
+        (da).data[byte_slice->length++] = (value);                                                                                                                  \
     } while (0)
 
 #if defined(CFLAT_IMPLEMENTATION)
 
-CflatSliceStruct cflat__slice_resize_opt(usize element_size, CflatArena *a, CflatSliceStruct s, usize capacity, CflatResizeOpt opt) {
+CflatByteSlice cflat__slice_resize_opt(usize element_size, CflatArena *a, CflatByteSlice s, usize capacity, CflatResizeOpt opt) {
     if (s.data == NULL) return cflat__slice_new_opt(element_size, a, 0, (CflatSliceNewOpt){capacity, opt.align, opt.clear});
     if (s.capacity >= capacity) return s;
     
     const usize old_size = element_size*s.capacity;
     const usize new_size = 2ULL*element_size*s.capacity;
-    CflatSliceStruct ns = {
+    CflatByteSlice ns = {
         .data = cflat_arena_extend_opt(a, s.data, old_size, new_size, (CflatAllocOpt){opt.align, opt.clear}),
         .length = s.length,
         .capacity = s.capacity * 2,

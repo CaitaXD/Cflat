@@ -333,13 +333,13 @@ void cflat_arena_pop(CflatArena *arena, usize size) {
         const usize allocated = curr->pos - sizeof(*curr);
         if (size < allocated) {
             const usize new_pos = curr->pos - size;
-            //ASAN_POISON_MEMORY_REGION(curr->data + new_pos, curr->pos - new_pos);
+            ASAN_POISON_MEMORY_REGION(curr->data + new_pos, curr->pos - new_pos);
             curr->pos = new_pos;
             break;
         }
         size      -= allocated;
         curr->pos -= allocated;
-        //ASAN_POISON_MEMORY_REGION(curr->data, curr->res - sizeof(*curr));
+        ASAN_POISON_MEMORY_REGION(curr->data, curr->res - sizeof(*curr));
         cflat_ll_push(arena->free, curr, prev);
         arena->curr = prev;
         curr = prev;
@@ -425,11 +425,11 @@ void cflat_drop_scratch_arena(CflatTempArena temp_arena) {
     cflat_arena_temp_end(temp_arena);
     cflat_tls_conflict_index -= 1;
 
-    // #if defined(ASAN_ENABLED)
-    // if (cflat_tls_conflict_index == 0)
-    //     for (usize i = 0; i < CFLAT_ARRAY_SIZE(cflat__tls_scratches); ++i)
-    //         ASAN_POISON_MEMORY_REGION(cflat__tls_arena_bytes[i], CFLAT_COL_SIZE(cflat__tls_arena_bytes));
-    // #endif
+    #if defined(ASAN_ENABLED)
+    if (cflat_tls_conflict_index == 0)
+        for (usize i = 0; i < CFLAT_ARRAY_SIZE(cflat__tls_scratches); ++i)
+            ASAN_POISON_MEMORY_REGION(cflat__tls_arena_bytes[i], CFLAT_COL_SIZE(cflat__tls_arena_bytes));
+    #endif
 }
 
 void* cflat_arena_top(CflatArena *arena) {
