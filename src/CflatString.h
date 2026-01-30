@@ -49,7 +49,7 @@ CflatStringView cflat_sv_from_cstr(const char *cstr)  {
         .length   = len, 
         .capacity = len + 1
     };
- };
+ }
 
 CflatStringView cflat_sv_clone_cstr(CflatArena *a, const char *cstr) {
     const usize len = strlen(cstr);
