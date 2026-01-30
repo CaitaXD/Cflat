@@ -9,9 +9,9 @@
 #include <stddef.h>
 
 typedef struct cflat_string_view {
-    char *data;
-    usize length;
     usize capacity;
+    usize length;
+    char *data;
 } CflatStringView;
 
 #define CFLAT__STRING_OVERLOAD(str, func) _Generic((str)                            \
