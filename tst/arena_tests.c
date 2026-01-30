@@ -105,7 +105,7 @@ void pop_should_free_blocks(void) {
 
 void arena_da_append_should_work(void) {
     // Arrange
-    i32Slice xs = slice_new(xs, a, 0, .clear = false);
+    i32Slice xs = slice_new(i32Slice, a, 0, .clear = false);
     // Act
     for (i32 i = 0; i < 100000; ++i) {
         slice_append(a, xs, i);
