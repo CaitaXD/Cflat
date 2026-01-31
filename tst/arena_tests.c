@@ -127,7 +127,7 @@ void arena_delete_wont_free_stack_memory(void) {
     // Assert
 }
 
-void subslice_should_work(void) {\
+void subslice_should_work(void) {
     // Arrange
     i32Slice xs = {0};
     slice_append(a, xs, 1);
@@ -135,32 +135,27 @@ void subslice_should_work(void) {\
     slice_append(a, xs, 3);
     slice_append(a, xs, 4);
     // Act
-    i32Slice sub;
-    mem_copy(&sub, &subslice(xs, 1, 2), sizeof(sub));
+    i32Slice sub = subslice(xs, 1, 2);
     // Assert
     ASSERT_EQUAL(slice_length(sub),  2ULL, "%zu");
     ASSERT_EQUAL(slice_data(sub)[0], 2, "%d");
     ASSERT_EQUAL(slice_data(sub)[1], 3, "%d");
 }
 
-// u64 mock_hash(u64 val) {
-//     return val * 11400714819323198485ULL;
-// }
-
 void hashtable_add_should_add_resize_and_get_correctly(void) {
     // Arrange
-    HashTable_u64_to_string *hashtable = cflat_hashtable_new(HashTable_u64_to_string, a, .capacity = 2);
+    HashTable_u64_to_string *hashtable = hashtable_new(HashTable_u64_to_string, a, .capacity = 2);
     // Act
     for (u64 i = 0; i < 1000; ++i) {
         char *str = arena_push(a, sizeof(char)*64, 0);
         sprintf(str, "%zu", i);
-        bool added = cflat_hashtable_add(a, hashtable, i, str);
+        bool added = hashtable_add(a, hashtable, i, str);
         // Assert
         ASSERT_TRUE(added);
     }
     // Act
     for (u64 i = 0; i < 100; ++i) {
-        char *str = cflat_hashtable_get(hashtable, i);
+        char *str = hashtable_get(hashtable, i);
         // Assert
         ASSERT_EQUAL((u64)atoi(str), i, "%zu");
     }

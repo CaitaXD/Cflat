@@ -13,13 +13,8 @@
     usize length;                \
     T     *data                  \
 
-typedef struct cflat_byte_slice { CFLAT_SLICE_FIELDS(byte); } CflatByteSlice;
-
-typedef struct cflat_slice_new_opt {
-    usize capacity;
-    usize align;
-    bool clear;
-} CflatSliceNewOpt;
+typedef struct cflat_byte_slice CflatByteSlice;
+typedef struct cflat_slice_new_opt CflatSliceNewOpt;
 
 #define cflat_slice_new(TSlice, ARENA, LEN, ...) cflat_lvalue_cast(CflatByteSlice, TSlice) {                                                                                                    \
     cflat__slice_new_opt(cflat_sizeof_member(TSlice, data[0]), (ARENA), (LEN), OVERRIDE_INIT(CflatSliceNewOpt, .capacity = 4, .align = cflat_alignof_member(TSlice, data[0]), __VA_ARGS__))     \
@@ -42,6 +37,16 @@ CFLAT_DEF CflatByteSlice cflat__slice_new_opt(usize element_size, CflatArena *a,
 CFLAT_DEF CflatByteSlice cflat__subslice(usize element_size, const CflatByteSlice *s, isize offset, isize length);
 
 #if defined(CFLAT_IMPLEMENTATION)
+
+struct cflat_slice_new_opt {
+    usize capacity;
+    usize align;
+    bool clear;
+};
+
+struct cflat_byte_slice { 
+    CFLAT_SLICE_FIELDS(byte); 
+};
 
 CflatByteSlice cflat__subslice(const usize element_size, const CflatByteSlice *s, const isize offset, const isize length) {
     usize u_offset = offset;

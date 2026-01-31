@@ -8,9 +8,7 @@
 #include <limits.h>
 #include <stddef.h>
 
-typedef struct cflat_string_view {
-    CFLAT_SLICE_FIELDS(char);
-} CflatStringView;
+typedef struct cflat_string_view CflatStringView;
 
 CFLAT_DEF CflatStringView cflat_sv_from_cstr           (const char *cstr                                                   );
 CFLAT_DEF CflatStringView cflat_sv_from_sv             (CflatStringView sv                                                 );
@@ -37,10 +35,13 @@ CFLAT_DEF CflatStringView cflat_path_name_sv           (CflatStringView path    
 #define cflat_sv_find_index(strnig, substring)        CFLAT__STRING_OVERLOAD((substring), cflat_sv_find_index)((strnig), (substring))
 #define cflat_sv_find_last_index(strnig, substring)   CFLAT__STRING_OVERLOAD((substring), cflat_sv_find_last_index)((strnig), (substring))
 #define cflat_path_name(path)                         CFLAT__STRING_OVERLOAD((path), cflat_path_name)((path))
-
-#define cflat_sv_is_nullterm(SV) ((SV).capacity > (SV).length && (SV).data[(SV).length] == '\0')
+#define cflat_sv_is_nullterm(SV)                      ((SV).capacity > (SV).length && (SV).data[(SV).length] == '\0')
 
 #if defined(CFLAT_IMPLEMENTATION)
+
+struct cflat_string_view {
+    CFLAT_SLICE_FIELDS(char);
+};
 
 CflatStringView cflat_sv_from_cstr(const char *cstr)  { 
     const usize len = strlen(cstr);
