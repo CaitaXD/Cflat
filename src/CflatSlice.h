@@ -4,9 +4,6 @@
 #include "CflatBit.h"
 #include "CflatCore.h"
 #include "CflatArena.h"
-#include <corecrt.h>
-
-#define cflat_lvalue_cast(TFROM, TTO) *(TTO *) (TFROM[1])
 
 #define CFLAT_SLICE_FIELDS(T)    \
     usize capacity;              \
@@ -20,8 +17,8 @@ typedef struct cflat_slice_new_opt CflatSliceNewOpt;
     cflat__slice_new_opt(cflat_sizeof_member(TSlice, data[0]), (ARENA), (LEN), OVERRIDE_INIT(CflatSliceNewOpt, .capacity = 4, .align = cflat_alignof_member(TSlice, data[0]), __VA_ARGS__))     \
 }
 
-#define cflat_subslice(SLICE, OFFSET, LEN) cflat_lvalue_cast(CflatByteSlice, cflat_typeof(SLICE)) {                                                                            \
-    cflat__subslice(sizeof((SLICE).data[0]), (void*)&(SLICE), (OFFSET), (LEN))                                                                                                 \
+#define cflat_subslice(SLICE, OFFSET, LEN) cflat_lvalue_cast(CflatByteSlice, cflat_typeof(SLICE)) {                                                                                             \
+    cflat__subslice(sizeof((SLICE).data[0]), (void*)&(SLICE), (OFFSET), (LEN))                                                                                                                  \
 }
 
 #define cflat_slice_skip(SLICE, SKIP) cflat_subslice((SLICE), (SKIP), (SLICE).length - (SKIP))

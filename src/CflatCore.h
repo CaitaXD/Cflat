@@ -198,7 +198,7 @@ typedef SSIZE_T ssize_t;
 #define cflat_ll_push(top,node,link) ((node)->link=(top), (top)=(node))
 #define cflat_ll_pop(top, link) ((top)=(top)->link)
 
-#define cflat_swap(a, b) do { cflat_typeof((a)) t__ = a; a = b; b = t__;} while(0)
+#define cflat_swap(T, a, b) do { T t__ = a; a = b; b = t__;} while(0)
 
 #define cflat_define_padded_struct(type, size) union {                                                                 \
     byte raw[sizeof(type) + (size)];                                                                                   \
@@ -216,6 +216,8 @@ typedef SSIZE_T ssize_t;
 #define cflat_mem_zero(mem, len) memset(mem, 0, len)
 
 #define cflat_lvalue(TYPE, LITERAL) (*(TYPE[1]) {LITERAL})
+#define cflat_lvalue_cast(TFROM, TTO) *(TTO *) (TFROM[1])
+
 
 #if !defined(container_of)
 #   define container_of(ptr, type, member) ((type *) ((byte *)(ptr) - offsetof(type, member)))

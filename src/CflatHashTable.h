@@ -33,22 +33,26 @@ CFLAT_DEF void*           (cflat_hashtable_get    )(usize key_size, usize value_
 
 #define cflat_hashtable_new(THashTable, ARENA, ...)                                                                                                                     \
     (THashTable*)                                                                                                                                                       \
-    cflat_hashtable_new_opt(cflat_sizeof_member(THashTable, keys[0]), cflat_sizeof_member(THashTable, values[0]),                                                       \
-                            (ARENA),                                                                                                                                    \
-                            OVERRIDE_INIT(CflatHashTableNewOpt, .capacity = 256, __VA_ARGS__))
+    (cflat_hashtable_new_opt)(cflat_sizeof_member(THashTable, keys[0]),                                                                                                 \
+                              cflat_sizeof_member(THashTable, values[0]),                                                                                               \
+                              (ARENA),                                                                                                                                  \
+                              OVERRIDE_INIT(CflatHashTableNewOpt, .capacity = 256, __VA_ARGS__))
 
 #define cflat_hashtable_add(ARENA, HT, KEY, VALUE)                                                                                                                      \
-    (cflat_hashtable_add)(sizeof((HT)->keys[0]), sizeof((HT)->values[0]),                                                                                               \
+    (bool)                                                                                                                                                              \
+    (cflat_hashtable_add)((sizeof((HT)->keys[0])),                                                                                                                      \
+                          (sizeof((HT)->values[0])),                                                                                                                    \
                           (ARENA),                                                                                                                                      \
                           (void*)&(HT),                                                                                                                                 \
-                          &cflat_lvalue(cflat_typeof((HT)->keys[0]),   (KEY)),                                                                                          \
+                          &cflat_lvalue(cflat_typeof((HT)->keys[0]), (KEY)),                                                                                            \
                           &cflat_lvalue(cflat_typeof((HT)->values[0]), (VALUE)))                                                                                        \
     
 #define cflat_hashtable_get(HT, KEY)                                                                                                                                    \
-    *(cflat_typeof((HT)->values))                                                                                                                                       \
-    (cflat_hashtable_get)(sizeof((HT)->keys[0]), sizeof((HT)->values[0]),                                                                                               \
-                         (void*)(HT),                                                                                                                                   \
-                         &cflat_lvalue(cflat_typeof((HT)->keys[0]),   (KEY)))                                                                                           \
+    (cflat_typeof((HT)->values))                                                                                                                                        \
+    (cflat_hashtable_get)((sizeof((HT)->keys[0])),                                                                                                                      \
+                          (sizeof((HT)->values[0])),                                                                                                                    \
+                          (void*)(HT),                                                                                                                                  \
+                          &cflat_lvalue(cflat_typeof((HT)->keys[0]), (KEY)))                                                                                            \
 
 #if defined(CFLAT_IMPLEMENTATION)
 
@@ -118,7 +122,7 @@ CflatHashTable* (cflat_hashtable_resize)(usize key_size, usize value_size, Cflat
     CflatHashTable *new_hashtable = cflat_arena_extend(a, hashtable, old_size, new_size, .align = word_aling, .clear = true);
 
     CflatTempArena temp;
-    arena_scratch_scope(temp) {
+    arena_scratch_scope(temp, a) {
         if (new_hashtable == hashtable) {
             CflatHashTable *old_hashtable = cflat_hashtable_new_opt(key_size, value_size, temp.arena, (CflatHashTableNewOpt) { .capacity = old_capacity, .hash = hashtable->hash, .equals = hashtable->equals });
             cflat_mem_copy(old_hashtable->flags,  hashtable->flags,  sizeof(*hashtable->flags)*old_capacity);
@@ -193,7 +197,7 @@ void* cflat__hashtable_add_raw(usize key_size, usize value_size, CflatHashTable 
             }
             break;
         }
-        default: cflat_assert(false && "Invalid ENUM HashTableEntryFlag");
+        default: cflat_assert(!"Invalid ENUM HashTableEntryFlag");
         }
     }
 }
@@ -219,7 +223,7 @@ void* (cflat_hashtable_get)(usize key_size, usize value_size, CflatHashTable *ha
             }
             break;
         }
-        default: cflat_assert(false && "Invalid ENUM HashTableEntryFlag");
+        default: cflat_assert(!"Invalid ENUM HashTableEntryFlag");
         }
     }
 }
