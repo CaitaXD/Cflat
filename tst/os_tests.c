@@ -50,7 +50,7 @@ int main(void) {
 
     for (usize i = 0; i < test_count; ++i) {
         TempArena tmp;
-        scratch_arena_scope(tmp) {
+        scratch_arena_scope(tmp, 0) {
             tests[i]();
         }
     }

@@ -54,6 +54,11 @@ typedef struct cflat_alloc_opt {
     bool clear;
 } CflatAllocOpt;
 
+typedef struct cflat_scratch_arena_scope_opt {
+    usize conflicts_count;
+    CflatArena **conflicts;
+} CflatScratchArenaScopeOpt;
+
 CFLAT_DEF CflatArena*    cflat_arena_init        (void *mem, usize size                                                        );
 CFLAT_DEF CflatArena*    cflat_arena_new_opt     (CflatArenaNewOpt opt                                                         );
 CFLAT_DEF void*          cflat_arena_push_opt    (CflatArena *arena, usize size, CflatAllocOpt opt                             );
@@ -66,7 +71,7 @@ CFLAT_DEF void*          cflat_arena_extend_opt  (CflatArena *arena, void *ptr, 
 CFLAT_DEF bool           cflat_arena_try_push_opt(CflatArena *arena, usize size, void **mem, CflatAllocOpt opt                 );
 CFLAT_DEF CflatTempArena cflat_arena_temp_begin  (CflatArena *arena                                                            );
 CFLAT_DEF void           cflat_arena_temp_end    (CflatTempArena temp_arena                                                    );
-CFLAT_DEF CflatTempArena cflat_get_scratch_arena (usize conflicts_count, CflatArena *conflicts[conflicts_count]                );
+CFLAT_DEF CflatTempArena cflat_get_scratch_arena (CflatScratchArenaScopeOpt opt                                                );
 CFLAT_DEF void           cflat_drop_scratch_arena(const CflatTempArena temp_arena                                              );
 
 #define cflat_arena_new(...)                              cflat_arena_new_opt(OVERRIDE_INIT(CflatArenaNewOpt, .reserve = CFLAT_DEFAULT_RESERVE_SIZE, .commit = CFLAT_DEFAULT_COMMIT_SIZE, __VA_ARGS__ ))
@@ -77,7 +82,7 @@ CFLAT_DEF void           cflat_drop_scratch_arena(const CflatTempArena temp_aren
 
 #define CFLAT_ARRAY_SPLAT(ARRAY) CFLAT_ARRAY_SIZE((ARRAY)), (ARRAY)
 
-#define cflat_scratch_arena_scope(tmp, ...) cflat_defer(tmp = cflat_get_scratch_arena( CFLAT_ARRAY_SPLAT((CflatArena*[]) {__VA_ARGS__}) ), cflat_drop_scratch_arena((tmp)))
+#define cflat_scratch_arena_scope(tmp, ...) cflat_defer(tmp = cflat_get_scratch_arena((CflatScratchArenaScopeOpt) {__VA_ARGS__}), cflat_drop_scratch_arena((tmp)))
 #define cflat_scope_exit                    continue
 
 #if defined(CFLAT_IMPLEMENTATION)
@@ -414,7 +419,9 @@ void cflat_arena_temp_end(const CflatTempArena temp_arena) {
 cflat_thread_local static CflatArena *cflat__tls_scratches[2] = {0};
 cflat_thread_local static byte cflat__tls_arena_bytes[CFLAT_ARRAY_SIZE(cflat__tls_scratches)][KiB(64)];
 
-CflatTempArena cflat_get_scratch_arena(usize conflicts_count, CflatArena *conflicts[conflicts_count]) {    
+CflatTempArena cflat_get_scratch_arena(CflatScratchArenaScopeOpt opt) {
+    usize conflicts_count = opt.conflicts_count;
+    CflatArena **conflicts = opt.conflicts;
     CflatArena *result = NULL;
     CflatArena **arena_ptr = cflat__tls_scratches;
     
@@ -437,7 +444,7 @@ CflatTempArena cflat_get_scratch_arena(usize conflicts_count, CflatArena *confli
             result = *arena_ptr;
 
             if (result == NULL || result->curr == NULL) {
-                result = cflat_arena_init(cflat__tls_arena_bytes[i], sizeof(cflat__tls_arena_bytes[i]));
+                result = cflat__tls_scratches[i] = cflat_arena_init(cflat__tls_arena_bytes[i], sizeof(cflat__tls_arena_bytes[i]));
             }
 
             break;

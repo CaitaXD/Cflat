@@ -92,12 +92,14 @@ void dealloc_should_offset_len(void) {
 void pop_should_free_blocks(void) {
     // Arrange
     usize freelist_count = 0;
+    usize max_res = a->curr->res;
     for (const CflatArenaNode *curr = a->free; curr; curr = curr->prev) {
         freelist_count += 1;
+        max_res = max(max_res, curr->res);
     }
     // Act
-    arena_push(a, a->curr->res, 1, true);
-    arena_pop(a, a->curr->res);
+    arena_push(a, max_res, 1, true);
+    arena_pop(a, max_res);
     usize new_freelist_count = 0;
     for (const CflatArenaNode *curr = a->free; curr; curr = curr->prev) {
         new_freelist_count += 1;
@@ -155,7 +157,7 @@ void hashtable_add_should_add_resize_and_get_correctly(void) {
     }
     // Act
     for (u64 i = 0; i < 100; ++i) {
-        char *str = hashtable_get(hashtable, i);
+        char *str = *hashtable_get(hashtable, i);
         // Assert
         ASSERT_EQUAL((u64)atoi(str), i, "%zu");
     }
@@ -189,14 +191,14 @@ int main(void) {
 
     for (usize i = 0; i < test_count; ++i) {
         TempArena tmp;
-        scratch_arena_scope(tmp) {
+        scratch_arena_scope(tmp, 0) {
             a = tmp.arena;
             tests[i]();
         }
     }
 
     TempArena tmp;
-    scratch_arena_scope(tmp) {
+    scratch_arena_scope(tmp, 0) {
         arena_delete(cflat__tls_scratches[0]);
         arena_delete(cflat__tls_scratches[1]);
     }

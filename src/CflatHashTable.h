@@ -122,7 +122,7 @@ CflatHashTable* (cflat_hashtable_resize)(usize key_size, usize value_size, Cflat
     CflatHashTable *new_hashtable = cflat_arena_extend(a, hashtable, old_size, new_size, .align = word_aling, .clear = true);
 
     CflatTempArena temp;
-    arena_scratch_scope(temp, a) {
+    arena_scratch_scope(temp, 1, &a) {
         if (new_hashtable == hashtable) {
             CflatHashTable *old_hashtable = cflat_hashtable_new_opt(key_size, value_size, temp.arena, (CflatHashTableNewOpt) { .capacity = old_capacity, .hash = hashtable->hash, .equals = hashtable->equals });
             cflat_mem_copy(old_hashtable->flags,  hashtable->flags,  sizeof(*hashtable->flags)*old_capacity);
