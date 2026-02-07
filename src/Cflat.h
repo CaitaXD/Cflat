@@ -7,6 +7,9 @@
         - All must library functions have an alias without the cflat_ prefix, which can be disabled with by defining CFLAT_NO_ALIAS to 1
 
         - Types of constructors:
+            - cflat_xxx_alloc: Allocates memory for an object and returns a pointer to it
+                Takes in Arena *a as first argument (second int the case whhen a function takes in element_size)
+
             - cflat_xxx_new: Allocates memory and initializes the object
                 Takes in Arena *a as first argument (second int the case whhen a function takes in element_size)
             

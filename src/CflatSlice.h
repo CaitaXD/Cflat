@@ -13,12 +13,16 @@
 typedef struct cflat_byte_slice CflatByteSlice;
 typedef struct cflat_slice_new_opt CflatSliceNewOpt;
 
-#define cflat_slice_new(TSlice, ARENA, LEN, ...) cflat_lvalue_cast(CflatByteSlice, TSlice) {                                                                                                    \
-    cflat__slice_new_opt(cflat_sizeof_member(TSlice, data[0]), (ARENA), (LEN), OVERRIDE_INIT(CflatSliceNewOpt, .capacity = 4, .align = cflat_alignof_member(TSlice, data[0]), __VA_ARGS__))     \
+#define cflat_slice_new(TSlice, ARENA, LEN, ...) cflat_lvalue_cast(CflatByteSlice, TSlice) {                                            \
+    cflat__slice_new_opt( (cflat_sizeof_member(TSlice, data[0])),                                                                       \
+                          (ARENA),                                                                                                      \
+                          (LEN),                                                                                                        \
+                          CFLAT_OPT(CflatSliceNewOpt, .capacity = 4, .align = cflat_alignof_member(TSlice, data[0]), __VA_ARGS__)       \
+    )                                                                                                                                   \
 }
 
-#define cflat_subslice(SLICE, OFFSET, LEN) cflat_lvalue_cast(CflatByteSlice, cflat_typeof(SLICE)) {                                                                                             \
-    cflat__subslice(sizeof((SLICE).data[0]), (void*)&(SLICE), (OFFSET), (LEN))                                                                                                                  \
+#define cflat_subslice(TSlice, SLICE, OFFSET, LEN) cflat_lvalue_cast(CflatByteSlice, TSlice) {                                          \
+    cflat__subslice(cflat_sizeof_member(TSlice, data[0]), (void*)&(SLICE), (OFFSET), (LEN))                                             \
 }
 
 #define cflat_slice_skip(SLICE, SKIP) cflat_subslice((SLICE), (SKIP), (SLICE).length - (SKIP))
@@ -27,8 +31,7 @@ typedef struct cflat_slice_new_opt CflatSliceNewOpt;
 #define cflat_slice_length(SLICE)     (SLICE).length
 #define cflat_slice_capacity(SLICE)   (SLICE).capacity
 #define cflat_slice_data(SLICE)       (SLICE).data
-#define cflat_slice_at(SLICE, INDEX)  ( cflat_bounds_check( (INDEX), cflat_slice_length( (SLICE) ) ), \
-                                        cflat_slice_data( (SLICE) ) + (INDEX)                         )
+#define cflat_slice_at(SLICE, INDEX)  (cflat_slice_data( (SLICE) ) + cflat_bounds_check( (INDEX), cflat_slice_length( (SLICE) )))
 
 CFLAT_DEF CflatByteSlice cflat__slice_new_opt(usize element_size, CflatArena *a, usize length, CflatSliceNewOpt opt);
 CFLAT_DEF CflatByteSlice cflat__subslice(usize element_size, const CflatByteSlice *s, isize offset, isize length);

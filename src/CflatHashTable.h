@@ -16,12 +16,24 @@
     CflatHashFunction *hash;                    \
     CflatEqualsFunction *equals                 \
 
-typedef u64 HashTableEntryFlag;
-typedef struct cflat_hashtable CflatHashTable;
-typedef struct cflat_hashstable_new_opt CflatHashTableNewOpt;
+cflat_enum(HashTableEntryFlag, u64) {
+    CFLAT__HASH_ENTRY_EMPTY      = 0,
+    CFLAT__HASH_ENTRY_USED       = 1,
+    CFLAT__HASH_ENTRY_DELETED    = 2,
+};
 
 typedef u64 (CflatHashFunction)  (const void *key);
 typedef bool(CflatEqualsFunction)(const void *lhs, const void *rhs);
+
+typedef struct cflat_hashtable {
+    CFLAT_HASHTABLE_FIELDS(byte, byte);
+} CflatHashTable;
+
+typedef  struct cflat_hashstable_new_opt {
+    usize capacity;
+    CflatHashFunction *hash;
+    CflatEqualsFunction *equals;
+}CflatHashTableNewOpt;
 
 CFLAT_DEF CflatHashTable* (cflat_hashtable_new_opt)(usize key_size, usize value_size, CflatArena *a, CflatHashTableNewOpt opt);
 CFLAT_DEF CflatHashTable* (cflat_hashtable_resize )(usize key_size, usize value_size, CflatArena *a, CflatHashTable  *hashtable, usize capacity);
@@ -36,7 +48,7 @@ CFLAT_DEF void*           (cflat_hashtable_get    )(usize key_size, usize value_
     (cflat_hashtable_new_opt)(cflat_sizeof_member(THashTable, keys[0]),                                                                                                 \
                               cflat_sizeof_member(THashTable, values[0]),                                                                                               \
                               (ARENA),                                                                                                                                  \
-                              OVERRIDE_INIT(CflatHashTableNewOpt, .capacity = 256, __VA_ARGS__))
+                              CFLAT_OPT(CflatHashTableNewOpt, .capacity = 256, __VA_ARGS__))
 
 #define cflat_hashtable_add(ARENA, HT, KEY, VALUE)                                                                                                                      \
     (bool)                                                                                                                                                              \
@@ -53,24 +65,15 @@ CFLAT_DEF void*           (cflat_hashtable_get    )(usize key_size, usize value_
                           (sizeof((HT)->values[0])),                                                                                                                    \
                           (void*)(HT),                                                                                                                                  \
                           &cflat_lvalue(cflat_typeof((HT)->keys[0]), (KEY)))                                                                                            \
+                        
+#define cflat_hashtable_resize(HT, CAPACITY)                                                                                                                            \
+    (cflat_typeof((HT)->values))                                                                                                                                        \
+    (cflat_hashtable_resize)((sizeof((HT)->keys[0])),                                                                                                                   \
+                             (sizeof((HT)->values[0])),                                                                                                                 \
+                             (void*)(HT),                                                                                                                               \
+                             (CAPACITY))                                                                                                                                \
 
 #if defined(CFLAT_IMPLEMENTATION)
-
-cflat_enum(HashTableEntryFlag, u64) {
-    CFLAT__HASH_ENTRY_EMPTY      = 0,
-    CFLAT__HASH_ENTRY_USED       = 1,
-    CFLAT__HASH_ENTRY_DELETED    = 2,
-};
-
-struct cflat_hashtable {
-    CFLAT_HASHTABLE_FIELDS(byte, byte);
-};
-
-struct cflat_hashstable_new_opt {
-    usize capacity;
-    CflatHashFunction *hash;
-    CflatEqualsFunction *equals;
-};
 
 void* cflat__hashtable_add_raw(usize key_size, usize value_size, CflatHashTable *hashtable, const void *key, void *value, usize *out_index);
 
@@ -110,7 +113,7 @@ CflatHashTable* cflat_hashtable_new_opt(usize key_size, usize value_size, CflatA
 CflatHashTable* (cflat_hashtable_resize)(usize key_size, usize value_size, CflatArena *a, CflatHashTable *hashtable, usize capacity) {
     
     if (hashtable == NULL) {
-        return cflat_hashtable_new_opt(key_size, value_size, a, (CflatHashTableNewOpt) { .capacity = capacity, .hash = hashtable->hash, .equals = hashtable->equals });
+        return cflat_hashtable_new_opt(key_size, value_size, a, (CflatHashTableNewOpt) { .capacity = capacity });
     }
 
     usize old_capacity = (1ULL << hashtable->exponent);

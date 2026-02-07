@@ -224,13 +224,13 @@ typedef SSIZE_T ssize_t;
 #endif
 
 #if defined(NO_BOUNDS_CHECK)
-#   define cflat_bounds_check(index, len) ((void)(index), (void)(len))
+#   define cflat_bounds_check(index, len) ((void)(len), (index))
 #else
-#   define cflat_bounds_check(index, len) cflat_assert((usize)(index) < (usize)(len) && "Index out of bounds")
+#   define cflat_bounds_check(index, len) (cflat_assert((usize)(index) < (usize)(len) && "Index out of bounds"), (index))
 #endif
 
 #if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
-#define OVERRIDE_INIT(CLITERAL, ...)                            \
+#define CFLAT_OPT(CLITERAL, ...)                                \
 __extension__  ({                                               \
     _Pragma("GCC diagnostic push")                              \
     _Pragma("GCC diagnostic ignored \"-Woverride-init\"")       \
@@ -238,7 +238,7 @@ __extension__  ({                                               \
     _Pragma("GCC diagnostic pop")                               \
 })
 #else
-#   define OVERRIDE_INIT(CLITERAL, ...) ((CLITERAL) {__VA_ARGS__})
+#   define CFLAT_OPT(CLITERAL, ...) ((CLITERAL) {__VA_ARGS__})
 #endif
 
 #ifndef KiB
@@ -340,6 +340,8 @@ typedef u8 byte;
 #   define COL_SIZE CFLAT_COL_SIZE
 #   define mem_copy cflat_mem_copy
 #   define mem_zero cflat_mem_zero
+#   define lvalue cflat_lvalue
+#   define lvalue_cast cflat_lvalue_cast
 #endif // CFLAT_NO_ALIAS
 
 #endif //CFLAT_DEF_H

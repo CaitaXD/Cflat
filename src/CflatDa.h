@@ -7,41 +7,25 @@
 #include "CflatSlice.h"
 #include <stdio.h>
 
-typedef struct cflat_da_init_opt {
-    usize capacity;
-    bool clear;
-} CflatDaInitOpt;
-
-typedef struct cflat_resize_opt {
-    usize align;
-    bool clear;
-} CflatResizeOpt;
-
-#define cflat_slice_append(arena, da, value)                                                                                                                        \
-    do {                                                                                                                                                            \
-        CflatResizeOpt resize_opt = (CflatResizeOpt) { .align = cflat_alignofexp((da).data[0]), .clear = false };                                                   \
-        CflatByteSlice *byte_slice = (void*)&(da);                                                                                                                  \
-        *byte_slice = cflat__slice_resize_opt(sizeof((da).data[0]), (arena), *byte_slice, byte_slice->length + 1, resize_opt);                                      \
-        (da).data[byte_slice->length++] = (value);                                                                                                                  \
+#define cflat_slice_resize(ARENA, DA, HINT)                                                                                      \
+    do {                                                                                                                         \
+        const usize element_size = sizeof(*(DA)->data);                                                                          \
+        const usize element_alignment = cflat_alignof(*(DA)->data);                                                              \
+        const CflatAllocOpt alloc_opt = (CflatAllocOpt) { .align = element_alignment, .clear = false };                          \
+        if ((HINT) > (DA)->capacity) {                                                                                           \
+            const usize old_size = (DA)->capacity * element_size;                                                                \
+            if ((DA)->capacity == 0) (DA)->capacity = 4;                                                                         \
+            while ((HINT) > (DA)->capacity) (DA)->capacity *= 2;                                                                 \
+            const usize new_size = cflat_next_pow2_u64((DA)->capacity * element_size);                                           \
+            (DA)->data = cflat_arena_extend_opt((ARENA), (DA)->data, old_size, new_size , alloc_opt);                            \
+        }                                                                                                                        \
     } while (0)
 
-#if defined(CFLAT_IMPLEMENTATION)
-
-CflatByteSlice cflat__slice_resize_opt(usize element_size, CflatArena *a, CflatByteSlice s, usize capacity, CflatResizeOpt opt) {
-    if (s.data == NULL) return cflat__slice_new_opt(element_size, a, 0, (CflatSliceNewOpt){capacity, opt.align, opt.clear});
-    if (s.capacity >= capacity) return s;
-    
-    const usize old_size = element_size*s.capacity;
-    const usize new_size = 2ULL*element_size*s.capacity;
-    CflatByteSlice ns = {
-        .data = cflat_arena_extend_opt(a, s.data, old_size, new_size, (CflatAllocOpt){opt.align, opt.clear}),
-        .length = s.length,
-        .capacity = s.capacity * 2,
-    };
-    return ns;
-}
-
-#endif // CFLAT_IMPLEMENTATION
+#define cflat_slice_append(ARENA, DA, VAL)                                                                                       \
+    do {                                                                                                                         \
+        cflat_slice_resize((ARENA), (DA), (DA)->length + 1);                                                                     \
+        (DA)->data[(DA)->length++] = (VAL);                                                                                      \
+    } while (0)
 
 #ifndef CFLAT_DA_NO_ALIAS
 #   define slice_append cflat_slice_append

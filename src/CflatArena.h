@@ -74,10 +74,10 @@ CFLAT_DEF void           cflat_arena_temp_end    (CflatTempArena temp_arena     
 CFLAT_DEF CflatTempArena cflat_get_scratch_arena (CflatScratchArenaScopeOpt opt                                                );
 CFLAT_DEF void           cflat_drop_scratch_arena(const CflatTempArena temp_arena                                              );
 
-#define cflat_arena_new(...)                              cflat_arena_new_opt(OVERRIDE_INIT(CflatArenaNewOpt, .reserve = CFLAT_DEFAULT_RESERVE_SIZE, .commit = CFLAT_DEFAULT_COMMIT_SIZE, __VA_ARGS__ ))
-#define cflat_arena_push(a, size, ...)                    cflat_arena_push_opt((a), (size), OVERRIDE_INIT(CflatAllocOpt, __VA_ARGS__))
-#define cflat_arena_try_push(a, size, mem, ...)           cflat_arena_try_push_opt((a), (size), (mem), OVERRIDE_INIT(CflatAllocOpt, .align = cflat_alignof(uptr), __VA_ARGS__))
-#define cflat_arena_extend(a, ptr, oldsize, newsize, ...) cflat_arena_extend_opt((a), (ptr), (oldsize), (newsize), OVERRIDE_INIT(CflatAllocOpt, .align = cflat_alignof(uptr), __VA_ARGS__))
+#define cflat_arena_new(...)                              cflat_arena_new_opt(CFLAT_OPT(CflatArenaNewOpt, .reserve = CFLAT_DEFAULT_RESERVE_SIZE, .commit = CFLAT_DEFAULT_COMMIT_SIZE, __VA_ARGS__ ))
+#define cflat_arena_push(a, size, ...)                    cflat_arena_push_opt((a), (size), CFLAT_OPT(CflatAllocOpt, __VA_ARGS__))
+#define cflat_arena_try_push(a, size, mem, ...)           cflat_arena_try_push_opt((a), (size), (mem), CFLAT_OPT(CflatAllocOpt, .align = cflat_alignof(uptr), __VA_ARGS__))
+#define cflat_arena_extend(a, ptr, oldsize, newsize, ...) cflat_arena_extend_opt((a), (ptr), (oldsize), (newsize), CFLAT_OPT(CflatAllocOpt, .align = cflat_alignof(uptr), __VA_ARGS__))
 #define cflat_temp_arena_scope(arena)                     cflat_defer(TempArena CONCAT(_t, __LINE__) = cflat_arena_temp_begin((arena)), cflat_arena_temp_end(CONCAT(_t, __LINE__)))
 
 #define CFLAT_ARRAY_SPLAT(ARRAY) CFLAT_ARRAY_SIZE((ARRAY)), (ARRAY)
