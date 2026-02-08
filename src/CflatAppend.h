@@ -10,7 +10,7 @@
 #define cflat_slice_resize(ARENA, DA, HINT)                                                                                      \
     do {                                                                                                                         \
         const usize element_size = sizeof(*(DA)->data);                                                                          \
-        const usize element_alignment = cflat_alignof(*(DA)->data);                                                              \
+        const usize element_alignment = cflat_alignof(max_align_t);                                                              \
         const CflatAllocOpt alloc_opt = (CflatAllocOpt) { .align = element_alignment, .clear = false };                          \
         if ((HINT) > (DA)->capacity) {                                                                                           \
             const usize old_size = (DA)->capacity * element_size;                                                                \

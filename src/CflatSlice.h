@@ -25,8 +25,8 @@ typedef struct cflat_slice_new_opt CflatSliceNewOpt;
     cflat__subslice(cflat_sizeof_member(TSlice, data[0]), (void*)&(SLICE), (OFFSET), (LEN))                                             \
 }
 
-#define cflat_slice_skip(SLICE, SKIP) cflat_subslice((SLICE), (SKIP), (SLICE).length - (SKIP))
-#define cflat_slice_take(SLICE, TAKE) cflat_subslice((SLICE), 0, (TAKE))
+#define cflat_slice_skip(TSlice, SLICE, SKIP) cflat_subslice(TSlice, (SLICE), (SKIP), (SLICE).length - (SKIP))
+#define cflat_slice_take(TSlice, SLICE, TAKE) cflat_subslice(TSlice, (SLICE), 0, (TAKE))
 
 #define cflat_slice_length(SLICE)     (SLICE).length
 #define cflat_slice_capacity(SLICE)   (SLICE).capacity

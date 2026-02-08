@@ -43,7 +43,7 @@ CflatRingBuffer *ring_buffer_new_opt(usize element_size, Arena *a, usize length,
     return rb;
 }
 
-bool (ring_buffer_is_empty)(CflatRingBuffer *rb) {
+bool ring_buffer_is_empty(CflatRingBuffer *rb) {
     
     if (rb == NULL) return true;
     
@@ -53,7 +53,7 @@ bool (ring_buffer_is_empty)(CflatRingBuffer *rb) {
     return read == write;
 }
 
-bool (ring_buffer_read)(usize element_size, CflatRingBuffer *rb, void *dst, RingBufferReadOpt opt) {
+bool ring_buffer_read(usize element_size, CflatRingBuffer *rb, void *dst, RingBufferReadOpt opt) {
     
     if (rb == NULL) return false;
     
@@ -71,7 +71,7 @@ bool (ring_buffer_read)(usize element_size, CflatRingBuffer *rb, void *dst, Ring
     return true;
 }
 
-bool (ring_buffer_write)(usize element_size, CflatRingBuffer *rb, const void *src) {
+bool ring_buffer_write(usize element_size, CflatRingBuffer *rb, const void *src) {
     
     if (rb == NULL) return false;
 
@@ -80,11 +80,11 @@ bool (ring_buffer_write)(usize element_size, CflatRingBuffer *rb, const void *sr
         return false;
     }
     
-    (ring_buffer_overwrite)(element_size, rb, src);
+    ring_buffer_overwrite(element_size, rb, src);
     return true;
 }
 
-void (ring_buffer_overwrite)(usize element_size, CflatRingBuffer *rb, const void *src) {
+void ring_buffer_overwrite(usize element_size, CflatRingBuffer *rb, const void *src) {
     
     if (rb == NULL) return;
 
@@ -103,11 +103,11 @@ void (ring_buffer_overwrite)(usize element_size, CflatRingBuffer *rb, const void
     rb->read = read;
 }
 
-void (ring_buffer_clear)(CflatRingBuffer *rb) {
+void ring_buffer_clear(CflatRingBuffer *rb) {
     rb->read = rb->write = 0;
 }
 
-usize (ring_buffer_count)(CflatRingBuffer *rb) {
+usize ring_buffer_count(CflatRingBuffer *rb) {
     
     if (rb == NULL) return 0;
     
