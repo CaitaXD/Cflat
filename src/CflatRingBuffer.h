@@ -25,12 +25,12 @@ CflatRingBuffer* cflat_ring_buffer_new_opt(usize element_size, Arena *a, usize l
 
 usize cflat_ring_buffer_count(CflatRingBuffer *rb);
 bool cflat_ring_buffer_is_empty(CflatRingBuffer *rb);
-bool cflat_ring_buffer_write(usize element_size, CflatRingBuffer *rb, const void *src);
-bool cflat_ring_buffer_read_opt(usize element_size, CflatRingBuffer *rb, void *dst, RingBufferReadOpt opt);
-void cflat_ring_buffer_overwrite(usize element_size, CflatRingBuffer *rb, const void *src);
 void cflat_ring_buffer_clear(CflatRingBuffer *rb);
+bool cflat_ring_buffer_write(CflatRingBuffer *rb, usize element_size, const void *src);
+bool cflat_ring_buffer_read_opt(CflatRingBuffer *rb, usize element_size, void *dst, RingBufferReadOpt opt);
+void cflat_ring_buffer_overwrite(CflatRingBuffer *rb, usize element_size, const void *src);
 
-#define cflat_ring_buffer_read(element_size, rb, dst, ...) ring_buffer_read_opt(element_size, rb, dst, CFLAT_OPT(RingBufferReadOpt, .clear = false, __VA_ARGS__))
+#define cflat_ring_buffer_read(rb, element_size, dst, ...) ring_buffer_read_opt(rb, element_size, dst, CFLAT_OPT(RingBufferReadOpt, .clear = false, __VA_ARGS__))
 
 #if defined(CFLAT_IMPLEMENTATION)
 
@@ -56,7 +56,7 @@ bool cflat_ring_buffer_is_empty(CflatRingBuffer *rb) {
     return read == write;
 }
 
-bool cflat_ring_buffer_read_opt(usize element_size, CflatRingBuffer *rb, void *dst, RingBufferReadOpt opt) {
+bool cflat_ring_buffer_read_opt(CflatRingBuffer *rb, usize element_size, void *dst, RingBufferReadOpt opt) {
     
     if (rb == NULL) return false;
     
@@ -74,7 +74,7 @@ bool cflat_ring_buffer_read_opt(usize element_size, CflatRingBuffer *rb, void *d
     return true;
 }
 
-bool cflat_ring_buffer_write(usize element_size, CflatRingBuffer *rb, const void *src) {
+bool cflat_ring_buffer_write(CflatRingBuffer *rb, usize element_size, const void *src) {
     
     if (rb == NULL) return false;
 
@@ -83,11 +83,11 @@ bool cflat_ring_buffer_write(usize element_size, CflatRingBuffer *rb, const void
         return false;
     }
     
-    cflat_ring_buffer_overwrite(element_size, rb, src);
+    cflat_ring_buffer_overwrite(rb, element_size, src);
     return true;
 }
 
-void cflat_ring_buffer_overwrite(usize element_size, CflatRingBuffer *rb, const void *src) {
+void cflat_ring_buffer_overwrite(CflatRingBuffer *rb, usize element_size, const void *src) {
     
     if (rb == NULL) return;
 

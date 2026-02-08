@@ -8,10 +8,10 @@
 
         - Types of constructors:
             - cflat_xxx_alloc: Allocates memory for an object and returns a pointer to it
-                Takes in Arena *a as first argument (second int the case whhen a function takes in element_size)
+                Takes in Arena *a as first argument
 
             - cflat_xxx_new: Allocates memory and initializes the object
-                Takes in Arena *a as first argument (second int the case whhen a function takes in element_size)
+                Takes in Arena *a as first argument
             
             - cflat_xxx_init: Initializes
                 Should never allocate memory
