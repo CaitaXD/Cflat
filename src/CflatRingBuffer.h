@@ -25,9 +25,11 @@ CflatRingBuffer* ring_buffer_new_opt(usize element_size, Arena *a, usize length,
 usize ring_buffer_count(CflatRingBuffer *rb);
 bool ring_buffer_is_empty(CflatRingBuffer *rb);
 bool ring_buffer_write(usize element_size, CflatRingBuffer *rb, const void *src);
-bool ring_buffer_read(usize element_size, CflatRingBuffer *rb, void *dst, RingBufferReadOpt opt);
+bool ring_buffer_read_opt(usize element_size, CflatRingBuffer *rb, void *dst, RingBufferReadOpt opt);
 void ring_buffer_overwrite(usize element_size, CflatRingBuffer *rb, const void *src);
 void ring_buffer_clear(CflatRingBuffer *rb);
+
+#define ring_buffer_read(element_size, rb, dst, ...) ring_buffer_read_opt(element_size, rb, dst, CFLAT_OPT(RingBufferReadOpt, .clear = false, __VA_ARGS__))
 
 #if defined(CFLAT_IMPLEMENTATION)
 
@@ -53,7 +55,7 @@ bool ring_buffer_is_empty(CflatRingBuffer *rb) {
     return read == write;
 }
 
-bool ring_buffer_read(usize element_size, CflatRingBuffer *rb, void *dst, RingBufferReadOpt opt) {
+bool ring_buffer_read_opt(usize element_size, CflatRingBuffer *rb, void *dst, RingBufferReadOpt opt) {
     
     if (rb == NULL) return false;
     
