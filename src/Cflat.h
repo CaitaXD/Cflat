@@ -46,7 +46,6 @@ extern "C"
 #include "CflatSlice.h"
 #include "CflatString.h"
 #include "CflatMath.h"
-#include "CflatHashTable.h"
 #include "CflatBit.h"
 
 #if defined(__cplusplus)

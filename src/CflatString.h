@@ -11,7 +11,6 @@
 typedef struct cflat_string_view CflatStringView;
 
 CFLAT_DEF CflatStringView cflat_sv_from_cstr           (const char *cstr                                                   );
-CFLAT_DEF CflatStringView cflat_sv_from_sv             (CflatStringView sv                                                 );
 CFLAT_DEF CflatStringView cflat_sv_clone_cstr          (CflatArena *a, const char *cstr                                    );
 CFLAT_DEF CflatStringView cflat_sv_clone_sv            (CflatArena *a, CflatStringView sv                                  );
 CFLAT_DEF CflatStringView cflat_sv_find_substring_cstr (CflatStringView strnig, const char         *substring              );
