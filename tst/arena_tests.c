@@ -17,10 +17,6 @@ typedef struct {
     CFLAT_SLICE_FIELDS(i32);
 } i32Slice;
 
-// typedef struct {
-//     CFLAT_HASHTABLE_FIELDS(u64, char*);
-// } HashTable_u64_to_string;
-
 Arena *a;
 
 void arena_push_should_create_new_block(void) {
@@ -144,26 +140,6 @@ void subslice_should_work(void) {
     ASSERT_EQUAL(slice_data(sub)[1], 3, "%d");
 }
 
-// void hashtable_add_should_add_resize_and_get_correctly(void) {
-//     // Arrange
-//     HashTable_u64_to_string *hashtable = (void*)(cflat_hashtable_resize)(sizeof(u64), sizeof(char*), a, NULL, 2);
-//     // Act
-//     for (u64 i = 0; i < 1000; ++i) {
-//         char *str = arena_push(a, sizeof(char)*64, 0);
-//         sprintf(str, "%zu", i);
-//         bool added = hashtable_add(a, hashtable, i, str);
-//         // Assert
-//         ASSERT_TRUE(added);
-//     }
-//     // Act
-//     for (u64 i = 0; i < 100; ++i) {
-//         char *str = *(char **)hashtable_get(hashtable, i);
-//         // Assert
-//         ASSERT_EQUAL((u64)atoi(str), i, "%zu");
-//     }
-// }
-
-
 int main(void) {
 
     typedef void testfn(void);
@@ -177,7 +153,6 @@ int main(void) {
         pop_should_free_blocks,
         arena_da_append_should_work,
         arena_delete_wont_free_stack_memory,
-        //hashtable_add_should_add_resize_and_get_correctly,
         subslice_should_work,
     };
 

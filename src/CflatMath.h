@@ -87,6 +87,10 @@ CFLAT_DEF c32 sexpdecay_c32(c32 a, c32 b, f32 decay, f32 dt);
     long double complex: cimagl((X))                        \
 )
 
+#define cflat_min(A,B) (((A)<(B))?(A):(B))
+#define cflat_max(A,B) (((A)>(B))?(A):(B))
+#define cflat_abs(A)   (((A)<0) ? (-(A)) : ((A)))
+
 #endif // CFLAT_NO_GENERIC_MATH
 
 #if defined(CFLAT_IMPLEMENTATION)

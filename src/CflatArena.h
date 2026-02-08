@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include "CflatCore.h"
 #include "CflatBit.h"
+#include "CflatMath.h"
 
 #define cflat_stackalloc(SIZE) ((void*)((byte[(SIZE)]){0}))
 

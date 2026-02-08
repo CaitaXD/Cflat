@@ -178,10 +178,6 @@ typedef SSIZE_T ssize_t;
 #define cflat_typeof_member(T, member)  cflat_typeof ( ( (T*) 0)->member             )
 #define cflat_alignof_member(T, member) cflat_alignof(cflat_typeof_member(T, member) )
 
-#define cflat_min(A,B) (((A)<(B))?(A):(B))
-#define cflat_max(A,B) (((A)>(B))?(A):(B))
-#define cflat_abs(A) (((A) < 0) ? (-(A)) : ((A)))
-
 #define cflat_assert_type_member(T, member) (void)cflat_static_assert(cflat_sizeof_member(T,member), "")
 #define cflat_assert_ptr_has_member(p, member) (void)cflat_static_assert(sizeof(p)->member, "")
 #define cflat_assert_has_member(p, member) (void)cflat_static_assert(sizeof(p).member, "")
