@@ -3,7 +3,7 @@
 
 #include "CflatArena.h"
 #include "CflatCore.h"
-#include "CflatDa.h"
+#include "CflatAppend.h"
 #include "CflatSlice.h"
 #include <limits.h>
 #include <stddef.h>

@@ -4,14 +4,11 @@
 #include "CflatCore.h"
 #include "CflatArena.h"
 
-#define CFLAT_RING_BUFFER_FIELDS(T)    \
-    isize read;                        \
-    isize write;                       \
-    usize length;                      \
-    T data[]
-
 typedef struct cflat_ring_buffer {
-    CFLAT_RING_BUFFER_FIELDS(byte);
+  isize read;
+  isize write;
+  usize length;
+  byte data[];
 } CflatRingBuffer;
 
 typedef struct ring_buffer_new_opt {
@@ -23,23 +20,14 @@ typedef struct ring_buffer_read_opt {
     bool clear;
 } RingBufferReadOpt;
 
-CflatRingBuffer* (ring_buffer_new_opt)(usize element_size, Arena *a, usize length, RingBufferNewOpt opt);
+CflatRingBuffer* ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt);
 
-bool (ring_buffer_is_empty)(CflatRingBuffer *rb);
-bool (ring_buffer_write)(usize element_size, CflatRingBuffer *rb, const void *src);
-bool (ring_buffer_read)(usize element_size, CflatRingBuffer *rb, void *dst, RingBufferReadOpt opt);
-usize (ring_buffer_count)(CflatRingBuffer *rb);
-void (ring_buffer_overwrite)(usize element_size, CflatRingBuffer *rb, const void *src);
-void (ring_buffer_clear)(CflatRingBuffer *rb);
-
-#define ring_buffer_new(TRb, a, length, ...) ring_buffer_new_opt(sizeof(TRb), a, length, (RingBufferNewOpt){__VA_ARGS__})
-#define ring_buffer_lit(TRb, length) cflat_padded_struct(TRb, (length)*cflat_sizeof_member(TRb, data[0]), .length=(length))
-#define ring_buffer_write(rb, src) ring_buffer_write(cflat_sizeof_member(CflatRingBuffer, data[0]), (void*)rb, cflat_lvalue(cflat_typeof((rb)->data[0]), (src)))
-#define ring_buffer_overwrite(rb, src) ring_buffer_overwrite(cflat_sizeof_member(CflatRingBuffer, data[0]), (void*)rb, cflat_lvalue(cflat_typeof((rb)->data[0]), (src)))
-#define ring_buffer_read(rb, dst, ...) ring_buffer_read(cflat_sizeof_member(CflatRingBuffer, data[0]), (void*)rb, dst, (RingBufferReadOpt) { __VA_ARGS__ })
-#define ring_buffer_is_empty(rb) ring_buffer_is_empty((void*)rb)
-#define ring_buffer_count(rb) ring_buffer_count((void*)rb)
-#define ring_buffer_clear(rb) ring_buffer_clear((void*)rb)
+usize ring_buffer_count(CflatRingBuffer *rb);
+bool ring_buffer_is_empty(CflatRingBuffer *rb);
+bool ring_buffer_write(usize element_size, CflatRingBuffer *rb, const void *src);
+bool ring_buffer_read(usize element_size, CflatRingBuffer *rb, void *dst, RingBufferReadOpt opt);
+void ring_buffer_overwrite(usize element_size, CflatRingBuffer *rb, const void *src);
+void ring_buffer_clear(CflatRingBuffer *rb);
 
 #if defined(CFLAT_IMPLEMENTATION)
 

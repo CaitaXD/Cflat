@@ -42,7 +42,7 @@ extern "C"
 
 #include "CflatCore.h"
 #include "CflatArena.h"
-#include "CflatDa.h"
+#include "CflatAppend.h"
 #include "CflatSlice.h"
 #include "CflatString.h"
 #include "CflatMath.h"

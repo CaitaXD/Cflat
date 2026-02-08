@@ -97,7 +97,7 @@ typedef SSIZE_T ssize_t;
 
 #   define cflat_assert(e) __extension__  ({                                            \
     if (!(e)) {                                                                         \
-        fprintf(stderr, "Assertion Failed (%s:%d) %s", __FILE__, __LINE__, __func__);   \
+        fprintf(stderr, "Assertion Failed (%s:%d) %s ", __FILE__, __LINE__, __func__);   \
         puts(#e);                                                                       \
         cflat_trap();                                                                   \
     }                                                                                   \
