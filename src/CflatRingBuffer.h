@@ -8,7 +8,7 @@ typedef struct cflat_ring_buffer {
   isize read;
   isize write;
   usize length;
-  byte data[];
+  byte *data;
 } CflatRingBuffer;
 
 typedef struct ring_buffer_new_opt {
@@ -43,6 +43,7 @@ CflatRingBuffer *cflat_ring_buffer_new_opt(usize element_size, Arena *a, usize l
 
     rb->read = rb->write = 0;
     rb->length = next_pow2(length);
+    rb->data = (byte*)(rb + 1);
     return rb;
 }
 

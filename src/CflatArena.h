@@ -350,13 +350,13 @@ void cflat_arena_pop(CflatArena *arena, usize size) {
         const usize allocated = curr->pos - sizeof(*curr);
         if (size < allocated) {
             const usize new_pos = curr->pos - size;
-            ASAN_POISON_MEMORY_REGION(curr->data + new_pos, curr->pos - new_pos);
+            //ASAN_POISON_MEMORY_REGION(curr->data + new_pos, curr->pos - new_pos);
             curr->pos = new_pos;
             break;
         }
         size      -= allocated;
         curr->pos -= allocated;
-        ASAN_POISON_MEMORY_REGION(curr->data, curr->res - sizeof(*curr));
+        //ASAN_POISON_MEMORY_REGION(curr->data, curr->res - sizeof(*curr));
         cflat_ll_push(arena->free, curr, prev);
         arena->curr = prev;
         curr = prev;
