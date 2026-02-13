@@ -8,7 +8,7 @@ typedef struct cflat_ring_buffer {
   isize read;
   isize write;
   usize length;
-  byte *data;
+  byte data[];
 } CflatRingBuffer;
 
 typedef struct ring_buffer_new_opt {
@@ -21,7 +21,6 @@ typedef struct ring_buffer_read_opt {
 } RingBufferReadOpt;
 
 CflatRingBuffer* cflat_ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt);
-#define cflat_ring_buffer_lit(ELEMENT_SIZE, LENGTH) cflat_padded_struct(CflatRingBuffer, (ELEMENT_SIZE)*(LENGTH), .length = (LENGTH))
 
 usize cflat_ring_buffer_count(CflatRingBuffer *rb);
 bool cflat_ring_buffer_is_empty(CflatRingBuffer *rb);
@@ -43,7 +42,6 @@ CflatRingBuffer *cflat_ring_buffer_new_opt(usize element_size, Arena *a, usize l
 
     rb->read = rb->write = 0;
     rb->length = next_pow2(length);
-    rb->data = (byte*)(rb + 1);
     return rb;
 }
 
@@ -127,7 +125,6 @@ usize cflat_ring_buffer_count(CflatRingBuffer *rb) {
 
 #if !defined(CFLAT_RING_BUFFER_NO_ALIAS)
 #   define ring_buffer_new cflat_ring_buffer_new
-#   define ring_buffer_lit cflat_ring_buffer_lit
 #   define ring_buffer_count cflat_ring_buffer_count
 #   define ring_buffer_is_empty cflat_ring_buffer_is_empty
 #   define ring_buffer_write cflat_ring_buffer_write

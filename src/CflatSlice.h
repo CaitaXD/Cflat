@@ -5,7 +5,9 @@
 #include "CflatCore.h"
 #include "CflatArena.h"
 
+// A stride of 0 will be interpreted as 1.
 #define CFLAT_SLICE_FIELDS(T)    \
+    usize stride;                \
     usize capacity;              \
     usize length;                \
     T     *data                  \
@@ -31,7 +33,8 @@ typedef struct cflat_slice_new_opt CflatSliceNewOpt;
 #define cflat_slice_length(SLICE)     (SLICE).length
 #define cflat_slice_capacity(SLICE)   (SLICE).capacity
 #define cflat_slice_data(SLICE)       (SLICE).data
-#define cflat_slice_at(SLICE, INDEX)  (cflat_slice_data( (SLICE) ) + cflat_bounds_check( (INDEX), cflat_slice_length( (SLICE) )))
+#define cflat_slice_stride(SLICE)     (cflat_max(1, (SLICE).stride))
+#define cflat_slice_at(SLICE, INDEX)  ((SLICE).data + cflat_bounds_check( (INDEX) * cflat_slice_stride( (SLICE) ), (SLICE).length))
 
 CFLAT_DEF CflatByteSlice cflat__slice_new_opt(usize element_size, CflatArena *a, usize length, CflatSliceNewOpt opt);
 CFLAT_DEF CflatByteSlice cflat__subslice(usize element_size, const CflatByteSlice *s, isize offset, isize length);
@@ -49,8 +52,8 @@ struct cflat_byte_slice {
 };
 
 CflatByteSlice cflat__subslice(const usize element_size, const CflatByteSlice *s, const isize offset, const isize length) {
-    usize u_offset = offset;
-    usize u_len = length;
+    usize u_offset = offset * cflat_slice_stride(*s);
+    usize u_len = length    * cflat_slice_stride(*s);
 
     if (offset < 0) u_offset = s->length + offset;
     if (length < 0) u_len = s->length + length;

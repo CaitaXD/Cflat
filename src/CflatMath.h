@@ -20,32 +20,29 @@ typedef complex_double c64;
 typedef complex_long_double c128;
 #endif
 
-CFLAT_DEF f32 ilerp_f32(f32 a, f32 b, f32 t);
-CFLAT_DEF f32 lerp_f32(f32 a, f32 b, f32 t);
-CFLAT_DEF f32 expdecay_f32(f32 a, f32 b, f32 decay, f32 dt);
-CFLAT_DEF f32 remap_f32(f32 start1, f32 stop1, f32 start2, f32 stop2, float value);
-CFLAT_DEF f32 clamp_f32(f32 x, f32 min, f32 max);
+CFLAT_DEF f32 cflat_ilerp_f32(f32 a, f32 b, f32 t);
+CFLAT_DEF f32 cflat_lerp_f32(f32 a, f32 b, f32 t);
+CFLAT_DEF f32 cflat_expdecay_f32(f32 a, f32 b, f32 decay, f32 dt);
+CFLAT_DEF f32 cflat_remap_f32(f32 start1, f32 stop1, f32 start2, f32 stop2, float value);
+CFLAT_DEF f32 cflat_clamp_f32(f32 x, f32 min, f32 max);
 
-CFLAT_DEF c32 lerp_c32(c32 a, c32 b, f32 t);
-CFLAT_DEF f32 dot_c32(c32 a, c32 b);
-CFLAT_DEF c32 norm_c32(c32 a);
-CFLAT_DEF c32 rotate_c32(c32 a, f32 theta);
-CFLAT_DEF c32 slerp_c32(c32 a, c32 b, f32 t);
-CFLAT_DEF c32 sexpdecay_c32(c32 a, c32 b, f32 decay, f32 dt);
-
-#if !defined(CFLAT_NO_GENERIC_MATH)
+CFLAT_DEF c32 cflat_lerp_c32(c32 a, c32 b, f32 t);
+CFLAT_DEF f32 cflat_dot_c32(c32 a, c32 b);
+CFLAT_DEF c32 clfat_norm_c32(c32 a);
+CFLAT_DEF c32 cflat_rotate_c32(c32 a, f32 theta);
+CFLAT_DEF c32 clfat_slerp_c32(c32 a, c32 b, f32 t);
+CFLAT_DEF c32 cflat_sexpdecay_c32(c32 a, c32 b, f32 decay, f32 dt);
 
 #define cflat_pi (3.14159265358979323846264338327950288419716939937510582097494459230781640628620899)
+#define cflat_log_base(base, x) (log((x))/log((base)))
 
-#define log_base(base, x) (log((x))/log((base)))
-
-#define lerp(A,B,T) _Generic((A),                           \
+#define cflat_lerp(A,B,T) _Generic((A),                     \
     f32: lerp_f32((A), (B), (T)),                           \
     c32: lerp_c32((A), (B), (T))                            \
 )
 
-#define ilerp(A,B,T) _Generic((A),                           \
-    f32: ilerp_f32((A), (B), (T))                            \
+#define cflat_ilerp(A,B,T) _Generic((A),                    \
+    f32: ilerp_f32((A), (B), (T))                           \
 )
 
 #define sin(X) _Generic((X),                                \
@@ -91,69 +88,78 @@ CFLAT_DEF c32 sexpdecay_c32(c32 a, c32 b, f32 decay, f32 dt);
 #define cflat_max(A,B) (((A)>(B))?(A):(B))
 #define cflat_abs(A)   (((A)<0) ? (-(A)) : ((A)))
 
-#endif // CFLAT_NO_GENERIC_MATH
-
 #if defined(CFLAT_IMPLEMENTATION)
 
-f32 ilerp_f32(f32 a, f32 b, f32 t) {
+f32 cflat_ilerp_f32(f32 a, f32 b, f32 t) {
     return (t - a) / (b - a);
 }
 
-f32 lerp_f32(f32 a, f32 b, f32 t) {
+f32 cflat_lerp_f32(f32 a, f32 b, f32 t) {
     return a + (b - a) * t;
 }
 
-c32 lerp_c32(c32 a, c32 b, f32 t) {
+c32 cflat_lerp_c32(c32 a, c32 b, f32 t) {
     return a + (b - a) * t;
 }
 
-f32 expdecay_f32(f32 a, f32 b, f32 decay, f32 dt) {
+f32 cflat_expdecay_f32(f32 a, f32 b, f32 decay, f32 dt) {
     return b + (a - b) * expf(-decay*dt);
 }
 
-f32 dot_c32(c32 a, c32 b) {
+f32 cflat_dot_c32(c32 a, c32 b) {
     return crealf(a * conjf(b));
 }
 
-f32 clamp_f32(f32 x, f32 min, f32 max) {
+f32 cflat_clamp_f32(f32 x, f32 min, f32 max) {
     return fmaxf(min, fminf(x, max));
 }
 
-c32 norm_c32(c32 a) {
+c32 clfat_norm_c32(c32 a) {
     return a / cabsf(a);
 }
 
-c32 rotate_c32(c32 a, f32 theta) {
+c32 cflat_rotate_c32(c32 a, f32 theta) {
     return cexpf(I * theta) * a;
 }
 
-c32 slerp_c32(c32 a, c32 b, f32 t) {    
-    f32 a_sqmag = dot_c32(a, a);
-    f32 b_sqmag = dot_c32(b, b);
+c32 clfat_slerp_c32(c32 a, c32 b, f32 t) {    
+    f32 a_sqmag = cflat_dot_c32(a, a);
+    f32 b_sqmag = cflat_dot_c32(b, b);
 
     if (a_sqmag == 0 || b_sqmag == 0) {
-        return lerp_c32(a, b, t);
+        return cflat_lerp_c32(a, b, t);
     }
 
     f32 start_len = sqrtf(a_sqmag);
-    f32 end_len = lerp_f32(start_len, sqrtf(b_sqmag), t);
+    f32 end_len = cflat_lerp_f32(start_len, sqrtf(b_sqmag), t);
     f32 theta = cargf(a) - cargf(b);
 
-    return rotate_c32(a, theta*t) * (end_len / start_len);
+    return cflat_rotate_c32(a, theta*t) * (end_len / start_len);
 }
 
-c32 sexpdecay_c32(c32  a, c32 b, f32 decay, f32 dt) {
-    return slerp_c32(b, a, expf(-decay*dt));
+c32 cflat_sexpdecay_c32(c32  a, c32 b, f32 decay, f32 dt) {
+    return clfat_slerp_c32(b, a, expf(-decay*dt));
 }
 
-f32 remap_f32(f32 start1, f32 stop1, f32 start2, f32 stop2, float value) {
+f32 cflat_remap_f32(f32 start1, f32 stop1, f32 start2, f32 stop2, float value) {
     return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
 }
 
 #endif // CFLAT_IMPLEMENTATION
 
 #if !defined(CFLAT_MATH_NO_ALIAS)
+
 #   define pi cflat_pi
+#   define log_base cflat_log_base
+#   define lerp cflat_lerp
+#   define ilerp cflat_ilerp
+#   define norm_c32 clfat_norm_c32
+#   define rotate_c32 cflat_rotate_c32
+#   define slerp_c32 clfat_slerp_c32
+#   define sexpdecay_c32 cflat_sexpdecay_c32
+#   define remap_f32 cflat_remap_f32
+#   define clamp_f32 cflat_clamp_f32
+
 #endif // CFLAT_MATH_NO_ALIAS
 
 #endif //CFATLATMATH_H

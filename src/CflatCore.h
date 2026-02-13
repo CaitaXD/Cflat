@@ -173,6 +173,22 @@ typedef SSIZE_T ssize_t;
 #   define cflat_enum(ENUM_NAME, ENUM_TYPE) typedef ENUM_TYPE ENUM_NAME; enum
 #endif
 
+#if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+#   define cflat_force_inline inline __attribute__((always_inline))
+#elif defined(COMPILER_MSVC)
+#   define cflat_force_inline inline __forceinline
+#else
+#   define cflat_force_inline inline
+#endif
+
+#if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+#   define cflat_unlikely(x) __builtin_expect(!!(x), 0)
+#   define cflat_likely(x)   __builtin_expect(!!(x), 1)
+#else
+#   define cflat_unlikely(x) (x)
+#   define cflat_likely(x)   (x)
+#endif
+
 #define cflat_alignofexp(EXP) cflat_alignof(cflat_typeof(EXP))
 #define cflat_sizeof_member(T, member)  sizeof       ( ( (T*) 0)->member             )
 #define cflat_typeof_member(T, member)  cflat_typeof ( ( (T*) 0)->member             )
@@ -201,17 +217,18 @@ typedef SSIZE_T ssize_t;
     type structure;                                                                                                    \
 }
 
-#define cflat_padded_struct(type, size, ...) &(cflat_define_padded_struct(type, size)) {                               \
+#define cflat_padded_struct(type, size, ...) (cflat_define_padded_struct(type, size)) {                                \
     .structure={ __VA_ARGS__ }                                                                                         \
 }.structure
 
 #include <string.h>
 #include <stdlib.h>
+#define cflat_lvalue(TYPE, LITERAL) (*(TYPE[1]) {LITERAL})
 #define cflat_mem_copy memcpy
 #define cflat_mem_move memmove
-#define cflat_mem_zero(mem, len) memset(mem, 0, len)
+#define cflat_mem_zero(MEM, LEN) memset((MEM), 0, (LEN))
+#define cflat_bit_cast(TFrom, TTo, VAL) *(TTo*) cflat_mem_copy( &cflat_lvalue(TTo, 0), &cflat_lvalue(TFrom, (VAL)), sizeof(TTo))
 
-#define cflat_lvalue(TYPE, LITERAL) (*(TYPE[1]) {LITERAL})
 #define cflat_lvalue_cast(TFROM, TTO) *(TTO *) (TFROM[1])
 
 

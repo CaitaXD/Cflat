@@ -376,11 +376,7 @@ void cflat_arena_set_pos(CflatArena *arena, const usize pos) {
         cflat_arena_pop(arena, arena->pos - pos);
         return;
     }
-
-    cflat_arena_push_opt(arena, pos, (CflatAllocOpt) {
-        .align = 1,
-        .clear = false
-    });
+    cflat_arena_push(arena, pos, .align=1, .clear=false);
 }
 
 void cflat_arena_clear(CflatArena *arena) {
