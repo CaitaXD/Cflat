@@ -241,7 +241,7 @@ void cflat_ifft_c32(const usize fft_size, c32 *restrict out, const c32 *restrict
     const f32 scale = 1.0f/fft_size;
     const CflatVec256f scale_v = cflat_broadcast_v256f(scale);
     usize k = 0;
-    for (; k + cflat_vec_length(CflatVec256cf) <= fft_size; k += cflat_vec_length(CflatVec256cf))
+    cflat_for_vec(CflatVec256cf, k, fft_size)
         cflat_store_v256cf(out + k, cflat_mul_v256cff(cflat_load_v256cf(out + k), scale_v));
     for (; k < fft_size; k += 1)
         out[k] *= scale;

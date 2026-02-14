@@ -8,12 +8,14 @@
 #   include <immintrin.h>
 #endif
 
-#define cflat_vec_length(VEC) _Generic(*((VEC*)0)       \
-    , CflatVec256f:  8                                  \
-    , CflatVec256cf: 4                                  \
-    , CflatVec256i:  8                                  \
-    , CflatVec256d:  4                                  \
+#define cflat_vec_length(TVec)  _Generic(*((TVec*)0)        \
+    , CflatVec256f:  8                                      \
+    , CflatVec256cf: 4                                      \
+    , CflatVec256i:  8                                      \
+    , CflatVec256d:  4                                      \
 )
+
+#define cflat_for_vec(TVec, OFFSET, LEN) for (; (OFFSET) + cflat_vec_length(TVec) <= (LEN); (OFFSET) += cflat_vec_length(TVec))
 
 typedef struct cflat_vec256f {
     #if defined (__AVX__)
@@ -52,10 +54,14 @@ CFLAT_DEF CflatVec256cf cflat_v256cf(c32 x, c32 y, c32 z, c32 w);
 CFLAT_DEF CflatVec256cf cflat_v256cff(f32 xr, f32 xi, f32 yr, f32 yi, f32 zr, f32 zi, f32 wr, f32 wi);
 
 CFLAT_DEF CflatVec256cf cflat_load_v256cf(const c32 *src);
+CFLAT_DEF CflatVec256cf cflat_load_unaligned_v256cf(const c32 *src);
 CFLAT_DEF c32*          cflat_store_v256cf(c32 *dst, CflatVec256cf src);
+CFLAT_DEF c32*          cflat_store_unaligned_v256cf(c32 *dst, CflatVec256cf src);
 
-CFLAT_DEF CflatVec256f   cflat_load_v256f(const f32 *src);
-CFLAT_DEF f32*           cflat_store_v256f(f32 *dst, CflatVec256f src);
+CFLAT_DEF CflatVec256f  cflat_load_v256f(const f32 *src);
+CFLAT_DEF CflatVec256f  cflat_load_unaligned_v256f(const f32 *src);
+CFLAT_DEF f32*          cflat_store_v256f(f32 *dst, CflatVec256f src);
+CFLAT_DEF f32*          cflat_store_unaligned_v256f(f32 *dst, CflatVec256f src);
 
 CFLAT_DEF CflatVec256cf cflat_broadcast_v256cf(c32 x);
 CFLAT_DEF CflatVec256cf cflat_broadcast_v256cff(f32 real, f32 imag);
@@ -114,6 +120,16 @@ CflatVec256cf cflat_load_v256cf(const c32 *src) {
     #endif
 }
 
+CflatVec256cf cflat_load_unaligned_v256cf(const c32 *src) {
+    #if defined(__AVX__)
+    return (CflatVec256cf){ .v = _mm256_loadu_ps((const f32*)src) };
+    #else
+    CflatVec256cf res;
+    cflat_mem_copy(res.v, src, sizeof(res.v));
+    return res;
+    #endif
+}
+
 c32* cflat_store_v256cf(c32 *dst, CflatVec256cf src) {
     #if defined(__AVX__)
     _mm256_store_ps((f32*)dst, src.v);
@@ -125,7 +141,8 @@ c32* cflat_store_v256cf(c32 *dst, CflatVec256cf src) {
 
 CFLAT_DEF CflatVec256cf cflat_broadcast_v256cf(c32 x) {
     #if defined(__AVX__)
-    return (CflatVec256cf){ _mm256_castpd_ps(_mm256_set1_pd(cflat_bit_cast(f64, c32, x))) };
+    f64 f = cflat_bit_cast(f64, c32, x);
+    return (CflatVec256cf){ _mm256_castpd_ps(_mm256_set1_pd(f)) };
     #else
     return (CflatVec256cf){ .v = {x, x, x, x} };
     #endif
@@ -133,7 +150,8 @@ CFLAT_DEF CflatVec256cf cflat_broadcast_v256cf(c32 x) {
 
 CFLAT_DEF CflatVec256cf cflat_broadcast_v256cff(f32 real, f32 imag) {
     #if defined(__AVX__)
-    return (CflatVec256cf){ _mm256_castpd_ps(_mm256_set1_pd( cflat_bit_cast(f64, c32, (c32){ real + imag*I }) )) }; 
+    f64 f = cflat_bit_cast(f64, c32, (c32){ real + imag*I });
+    return (CflatVec256cf){ _mm256_castpd_ps(_mm256_set1_pd(f)) }; 
     #else
     c32 x = real + imag*I;
     return (CflatVec256cf){ .v = {x, x, x, x} };
@@ -142,17 +160,11 @@ CFLAT_DEF CflatVec256cf cflat_broadcast_v256cff(f32 real, f32 imag) {
 
 CflatVec256cf cflat_conj_v256cf(CflatVec256cf x) {
     #if defined(__AVX__)
-    cflat_alignas(32) const u32 mask_data[8] = {
-        0x00000000, 0x80000000, 0x00000000, 0x80000000,
-        0x00000000, 0x80000000, 0x00000000, 0x80000000
-    };
-    __m256 mask = _mm256_load_ps((const f32*)mask_data);
+    __m256 mask = _mm256_set_ps(-0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f);
     return (CflatVec256cf) { .v = _mm256_xor_ps(x.v, mask) };
     #else
     CflatVec256cf res;
-    for (usize i = 0; i < 4; ++i) {
-        res.v[i] = conjf(x.v[i]);
-    }
+    for (usize i = 0; i < cflat_vec_length(CflatVec256cf); ++i) res.v[i] = conjf(x.v[i]);
     return res;
     #endif
 }
@@ -206,7 +218,7 @@ CflatVec256cf cflat_mul_v256cff(CflatVec256cf x, CflatVec256f s) {
     return (CflatVec256cf){ .v = _mm256_mul_ps(x.v, s.v) };
     #else
     CflatVec256cf res;
-    for(usize i = 0; i < 8; ++i) ((f32*)res.v)[i] = ((f32*)x.v)[i] * ((f32*)s.v)[i];
+    for(usize i = 0; i < cflat_vec_length(CflatVec256f); ++i) ((f32*)res.v)[i] = ((f32*)x.v)[i] * ((f32*)s.v)[i];
     return res;
     #endif
 }
@@ -225,9 +237,28 @@ CflatVec256f cflat_load_v256f(const f32 *src) {
     #endif
 }
 
+CflatVec256f cflat_load_unaligned_v256f(const f32 *src) {
+    #if defined(__AVX__)
+    return (CflatVec256f){ .v = _mm256_loadu_ps(src) };
+    #else
+    CflatVec256f res;
+    cflat_mem_copy(res.v, src, sizeof(res.v));
+    return res;
+    #endif
+}
+
 f32* cflat_store_v256f(f32 *dst, CflatVec256f src) {
     #if defined(__AVX__)
     _mm256_store_ps(dst, src.v);
+    return dst;
+    #else
+    return cflat_mem_copy(dst, src.v, sizeof(src.v));
+    #endif
+}
+
+f32* cflat_store_unaligned_v256f(f32 *dst, CflatVec256f src) {
+    #if defined(__AVX__)
+    _mm256_storeu_ps(dst, src.v);
     return dst;
     #else
     return cflat_mem_copy(dst, src.v, sizeof(src.v));
@@ -304,6 +335,11 @@ CflatVec256f cflat_scale_v256f(CflatVec256f x, f32 s) {
 #endif // CFLAT_IMPLEMENTATION
 
 #if !defined(CFLAT_AVX_NO_ALIAS)
+
+#define Vec256f CflatVec256f
+#define Vec256cf CflatVec256cf
+#define Vec256d CflatVec256d
+#define Vec256i CflatVec256i
 
 #define v256f cflat_v256f
 #define v256cf cflat_v256cf
