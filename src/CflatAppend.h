@@ -27,6 +27,17 @@
         (DA)->data[(DA)->length++] = (VAL);                                                                                      \
     } while (0)
 
+#define cflat_slice_append_fixed(ARENA, DA, VAL)                                                                                 \
+    do {                                                                                                                         \
+        if ((DA)->length >= (DA)->capacity) break;                                                                               \
+        (DA)->data[(DA)->length++] = (VAL);                                                                                      \
+    } while (0)
+
+#define cflat_slice_remove_unordered(ARENA, DA, INDEX)      \
+    do {                                                    \
+        cflat_slice_at(*(DA), (INDEX)) = (DA)->data[--(DA)->length];   \
+    } while(0)
+
 #ifndef CFLAT_DA_NO_ALIAS
 #   define slice_append cflat_slice_append
 #endif // CFLAT_DA_NO_ALIAS

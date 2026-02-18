@@ -140,11 +140,7 @@ void subslice_should_work(void) {
     ASSERT_EQUAL(slice_data(sub)[1], 3, "%d");
 }
 
-#include "../src/CflatRingBuffer.h"
-
 int main(void) {
-
-    ring_buffer_lit(sizeof(i32), 10);
 
     typedef void testfn(void);
     testfn *tests[] = {

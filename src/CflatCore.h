@@ -189,6 +189,15 @@ typedef SSIZE_T ssize_t;
 #   define cflat_likely(x)   (x)
 #endif
 
+#if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+#   define cflat_pause __builtin_ia32_pause
+#elif defined(__x86_64__) || defined(__i386__)
+#   include <immintrin.h>
+#   define cflat_pause _mm_pause
+#else
+#   define cflat_pause
+#endif
+
 #define cflat_alignofexp(EXP) cflat_alignof(cflat_typeof(EXP))
 #define cflat_sizeof_member(T, member)  sizeof       ( ( (T*) 0)->member             )
 #define cflat_typeof_member(T, member)  cflat_typeof ( ( (T*) 0)->member             )
@@ -208,7 +217,7 @@ typedef SSIZE_T ssize_t;
 #define cflat_defer_exit continue
 
 #define cflat_ll_push(top,node,link) ((node)->link=(top), (top)=(node))
-#define cflat_ll_pop(top, link) ((top)=(top)->link)
+#define cflat_ll_pop(top,link)       ((top)=(top)->link)
 
 #define cflat_swap(T, a, b) do { T t__ = a; a = b; b = t__;} while(0)
 

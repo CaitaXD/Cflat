@@ -6,6 +6,8 @@ Diagnostics:
 CompileFlags:
   Add: [ 
     -xc,
+    -IC:\msys64\ucrt64\include,
+    -pthread,
     -std=c23,
     -Wall,
     -Wextra,
