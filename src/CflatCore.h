@@ -263,6 +263,12 @@ __extension__  ({                                               \
 #   define CFLAT_OPT(CLITERAL, ...) ((CLITERAL) {__VA_ARGS__})
 #endif
 
+#if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+#   define cflat_may_alias __attribute__((__may_alias__))
+#else 
+#   define cflat_may_alias
+#endif
+
 #ifndef KiB
 #   define KiB(x) ((x) << 10)
 #endif
@@ -355,6 +361,7 @@ typedef u8 byte;
 #   define ll_push cflat_ll_push
 #   define ll_pop cflat_ll_pop
 #   define swap cflat_swap
+#   define bit_cast cflat_bit_cast
 #   ifndef ARRAY_SIZE
 #       define ARRAY_SIZE CFLAT_ARRAY_SIZE
 #   endif

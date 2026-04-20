@@ -7,8 +7,11 @@
 #include "CflatSlice.h"
 #include <limits.h>
 #include <stddef.h>
+#include <stdarg.h>
 
-typedef struct cflat_string_view CflatStringView;
+typedef struct cflat_string_view {
+    CFLAT_SLICE_FIELDS(char);
+} CflatStringView;
 
 CFLAT_DEF CflatStringView cflat_sv_from_cstr           (const char *cstr                                                   );
 CFLAT_DEF CflatStringView cflat_sv_clone_cstr          (CflatArena *a, const char *cstr                                    );
@@ -21,6 +24,7 @@ CFLAT_DEF isize           cflat_sv_find_last_index_cstr(CflatStringView strnig, 
 CFLAT_DEF isize           cflat_sv_find_last_index_sv  (CflatStringView strnig, CflatStringView substring                  );
 CFLAT_DEF CflatStringView cflat_path_name_cstr         (const char *path                                                   );
 CFLAT_DEF CflatStringView cflat_path_name_sv           (CflatStringView path                                               );
+CFLAT_DEF CflatStringView cflat_sv_printf              (CflatArena *a, const char *fmt, ...                                );
 
 #define CFLAT__STRING_OVERLOAD(STR, func) _Generic((STR)                            \
     , char*:                        func##_cstr                                     \
@@ -37,10 +41,6 @@ CFLAT_DEF CflatStringView cflat_path_name_sv           (CflatStringView path    
 #define cflat_sv_is_nullterm(SV)                      ((SV).capacity > (SV).length && (SV).data[(SV).length] == '\0')
 
 #if defined(CFLAT_IMPLEMENTATION)
-
-struct cflat_string_view {
-    CFLAT_SLICE_FIELDS(char);
-};
 
 CflatStringView cflat_sv_from_cstr(const char *cstr)  { 
     const usize len = strlen(cstr);
@@ -120,7 +120,7 @@ isize cflat_sv_find_index_sv(CflatStringView string, CflatStringView substring) 
             if (state == substring.length) {
             
                 index = i - substring.length + 1;
-                scope_exit;
+                defer_exit;
             }
         }
     }
@@ -194,12 +194,29 @@ CflatStringView cflat_path_name_sv(CflatStringView path) {
 #endif // _WIN32
 }
 
-CflatStringView cflat_path_name_cstr (const char *path)         { return cflat_path_name_sv(cflat_sv_from_cstr(path)); }
+CflatStringView cflat_path_name_cstr(const char *path) { return cflat_path_name_sv(cflat_sv_from_cstr(path)); }
+
+CflatStringView cflat_sv_printf(CflatArena *a, const char *fmt, ...) {
+    va_list args, args_copy;
+    va_start(args, fmt);
+    va_copy(args_copy, args);
+    int required_length = vsnprintf(NULL, 0, fmt, args) + 1;
+    va_end(args);
+    CflatStringView result = (CflatStringView) {
+        .data = arena_push(a, required_length, .align = cflat_alignof(char), .clear = false),
+        .length = required_length - 1,
+        .capacity = required_length,
+    };
+    vsnprintf(result.data, required_length, fmt, args_copy);
+    va_end(args_copy);
+    return result;
+}
 
 #endif // CFLAT_IMPLEMENTATION
 
 
 #if !defined(CFLAT_STRING_NO_ALIAS)
+
 #   define sv_is_nullterm cflat_sv_is_nullterm
 #   define sv_lit cflat_sv_lit
 #   define sv_lit cflat_sv_lit
@@ -212,7 +229,8 @@ CflatStringView cflat_path_name_cstr (const char *path)         { return cflat_p
 #   define StringBuilder CflatStringBuilder
 #   define String CflatString
 #   define StringView CflatStringView
-#   define Path CflatPath
+#   define sv_printf cflat_sv_printf
+
 #endif // CFLAT_STRING_NO_ALIAS
 
 

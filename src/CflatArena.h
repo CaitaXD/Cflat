@@ -14,8 +14,9 @@
 #define CFLAT_DEFAULT_COMMIT_SIZE  KiB(4)
 
 cflat_enum(CflatArenaFlags, u64) {
-    CFLAT_ARENA_OWNS_MEMORY = 1 << 0,
-    CFLAT_ARENA_FIXED_SIZE  = 1 << 1,
+    CFLAT_ARENA_OWNS_MEMORY  = 1 << 0,
+    CFLAT_ARENA_FIXED_SIZE   = 1 << 1,
+    CFLAT_MEMORY_MAPPED      = 1 << 2,
 };
 
 #define cflat_has_flag(FLAGS, FLAG)   (((FLAGS) & (FLAG)) != 0)
@@ -38,8 +39,7 @@ typedef struct cflat_arena_node {
     byte data[];
 } CflatArenaNode;
 
-typedef struct cflat_arena_scope
-{
+typedef struct cflat_arena_scope {
     CflatArena *arena;
     usize pos;
 } CflatTempArena;
@@ -60,31 +60,45 @@ typedef struct cflat_scratch_arena_scope_opt {
     CflatArena **conflicts;
 } CflatScratchArenaScopeOpt;
 
-CFLAT_DEF CflatArena*    cflat_arena_init        (void *mem, usize size                                                        );
-CFLAT_DEF CflatArena*    cflat_arena_new_opt     (CflatArenaNewOpt opt                                                         );
-CFLAT_DEF void*          cflat_arena_push_opt    (CflatArena *arena, usize size, CflatAllocOpt opt                             );
-CFLAT_DEF void           cflat_arena_pop         (CflatArena *arena, usize size                                                );
-CFLAT_DEF void           cflat_arena_set_pos     (CflatArena *arena, usize pos                                                 );
-CFLAT_DEF void           cflat_arena_clear       (CflatArena *arena                                                            );
-CFLAT_DEF void           cflat_arena_delete      (CflatArena *arena                                                            );
-CFLAT_DEF void*          cflat_arena_top         (CflatArena *arena                                                            );
-CFLAT_DEF void*          cflat_arena_extend_opt  (CflatArena *arena, void *ptr, usize oldsize, usize newsize, CflatAllocOpt opt);
-CFLAT_DEF bool           cflat_arena_try_push_opt(CflatArena *arena, usize size, void **mem, CflatAllocOpt opt                 );
-CFLAT_DEF CflatTempArena cflat_arena_temp_begin  (CflatArena *arena                                                            );
-CFLAT_DEF void           cflat_arena_temp_end    (CflatTempArena temp_arena                                                    );
-CFLAT_DEF CflatTempArena cflat_get_scratch_arena (CflatScratchArenaScopeOpt opt                                                );
-CFLAT_DEF void           cflat_drop_scratch_arena(const CflatTempArena temp_arena                                              );
+
+cflat_enum(CflatPermission, u8) {
+    CFLAT_PERMISSION_READ       = 1 << 0,
+    CFLAT_PERMISSION_WRITE      = 1 << 1,
+    CFLAT_PERMISSION_EXECUTE    = 1 << 2,
+};
+
+CFLAT_DEF CflatArena*    cflat_arena_memory_mapped   (const char *filepath, usize hint, CflatPermission mode                       );
+CFLAT_DEF CflatArena*    cflat_arena_init            (void *mem, usize size                                                        );
+CFLAT_DEF CflatArena*    cflat_arena_new_opt         (CflatArenaNewOpt opt                                                         );
+CFLAT_DEF void*          cflat_arena_push_opt        (CflatArena *arena, usize size, CflatAllocOpt opt                             );
+CFLAT_DEF void           cflat_arena_pop             (CflatArena *arena, usize size                                                );
+CFLAT_DEF void           cflat_arena_set_pos         (CflatArena *arena, usize pos                                                 );
+CFLAT_DEF void           cflat_arena_clear           (CflatArena *arena                                                            );
+CFLAT_DEF void           cflat_arena_delete          (CflatArena *arena                                                            );
+CFLAT_DEF void*          cflat_arena_top             (CflatArena *arena                                                            );
+CFLAT_DEF void*          cflat_arena_extend_opt      (CflatArena *arena, void *ptr, usize oldsize, usize newsize, CflatAllocOpt opt);
+CFLAT_DEF bool           cflat_arena_try_push_opt    (CflatArena *arena, usize size, void **mem, CflatAllocOpt opt                 );
+CFLAT_DEF CflatTempArena cflat_arena_temp_begin      (CflatArena *arena                                                            );
+CFLAT_DEF void           cflat_arena_temp_end        (CflatTempArena temp_arena                                                    );
+CFLAT_DEF CflatTempArena cflat_get_scratch_arena_opt (CflatScratchArenaScopeOpt opt                                                );
+CFLAT_DEF void           cflat_drop_scratch_arena    (const CflatTempArena temp_arena                                              );
 
 #define cflat_arena_new(...)                              cflat_arena_new_opt(CFLAT_OPT(CflatArenaNewOpt, .reserve = CFLAT_DEFAULT_RESERVE_SIZE, .commit = CFLAT_DEFAULT_COMMIT_SIZE, __VA_ARGS__ ))
 #define cflat_arena_push(a, size, ...)                    cflat_arena_push_opt((a), (size), CFLAT_OPT(CflatAllocOpt, __VA_ARGS__))
 #define cflat_arena_try_push(a, size, mem, ...)           cflat_arena_try_push_opt((a), (size), (mem), CFLAT_OPT(CflatAllocOpt, .align = cflat_alignof(uptr), __VA_ARGS__))
 #define cflat_arena_extend(a, ptr, oldsize, newsize, ...) cflat_arena_extend_opt((a), (ptr), (oldsize), (newsize), CFLAT_OPT(CflatAllocOpt, .align = cflat_alignof(uptr), __VA_ARGS__))
 #define cflat_temp_arena_scope(arena)                     cflat_defer(TempArena CONCAT(_t, __LINE__) = cflat_arena_temp_begin((arena)), cflat_arena_temp_end(CONCAT(_t, __LINE__)))
+#define cflat_arena_push_struct(T, ARENA, ...) (T*)cflat_mem_copy(             \
+    arena_push(ARENA, sizeof(T), .clear=false, .align=cflat_alignof(T)),       \
+    (&(T){__VA_ARGS__}),                                                       \
+    sizeof(T)                                                                  \
+)
+#define cflat_arena_push_array(a, T, N) ((T*)cflat_arena_push((a), sizeof(T)*(N)))
+#define cflat_get_scratch_arena(...) cflat_get_scratch_arena_opt((CflatScratchArenaScopeOpt) {__VA_ARGS__})
 
 #define CFLAT_ARRAY_SPLAT(ARRAY) CFLAT_ARRAY_SIZE((ARRAY)), (ARRAY)
 
-#define cflat_scratch_arena_scope(tmp, ...) cflat_defer(tmp = cflat_get_scratch_arena((CflatScratchArenaScopeOpt) {__VA_ARGS__}), cflat_drop_scratch_arena((tmp)))
-#define cflat_scope_exit                    continue
+#define cflat_scratch_arena_scope(tmp, ...) cflat_defer(tmp = cflat_get_scratch_arena_opt((CflatScratchArenaScopeOpt) {__VA_ARGS__}), cflat_drop_scratch_arena((tmp)))
 
 #if defined(CFLAT_IMPLEMENTATION)
 
@@ -105,7 +119,11 @@ CFLAT_DEF void           cflat_drop_scratch_arena(const CflatTempArena temp_aren
 #endif
 
 #if defined(OS_WINDOWS)
+typedef void* HWND;
 #include <memoryapi.h>
+#include <fileapi.h>
+#include <handleapi.h>
+#include <winbase.h>
 #elif defined(OS_UNIX)
 #include <sys/mman.h>
 #endif
@@ -134,9 +152,9 @@ static bool cflat__os_commit(void *ptr, usize size)
     return result;
     #elif defined(OS_UNIX)
     mprotect(ptr, size, PROT_READ|PROT_WRITE);
-    return 1;
+    return true;
     #elif
-    #error Unsuported platform
+    #error Unsuported pla, FileMode modetform
     #endif
 }
 
@@ -164,6 +182,111 @@ static void cflat__os_release(void *ptr, const usize size)
     munmap(ptr, size);
     #elif
     #error Unsuported platform
+    #endif
+}
+
+static void* cflat__os_memory_mapped_file(const char *filepath, usize hint, CflatPermission permission) {
+    #if defined(OS_WINDOWS)
+    DWORD access =
+        (permission & CFLAT_PERMISSION_READ  ? GENERIC_READ  : 0) |
+        (permission & CFLAT_PERMISSION_WRITE ? GENERIC_WRITE : 0);
+
+    HANDLE file_handle = CreateFileA(
+        filepath,
+        access,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_ALWAYS, // open or create
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+    
+    if (file_handle == INVALID_HANDLE_VALUE) return NULL;
+    
+    LARGE_INTEGER current_size = {0};
+    if (!GetFileSizeEx(file_handle, &current_size)) {
+        CloseHandle(file_handle);
+        return NULL;
+    }
+
+    if ((usize)current_size.QuadPart < hint) {
+        LARGE_INTEGER new_size;
+        new_size.QuadPart = (LONGLONG)hint;
+        if (!SetFilePointerEx(file_handle, new_size, NULL, FILE_BEGIN) || !SetEndOfFile(file_handle)) {
+            CloseHandle(file_handle);
+            return NULL;
+        }
+    }
+    
+    DWORD protect = (permission & CFLAT_PERMISSION_WRITE) ? PAGE_READWRITE : PAGE_READONLY;
+    HANDLE map_handle = CreateFileMappingA(file_handle, NULL, protect, 0, 0, NULL);
+    if (map_handle == NULL) {
+        CloseHandle(file_handle);
+        return NULL;
+    }
+
+    DWORD map_access =
+        (permission & CFLAT_PERMISSION_READ  ? FILE_MAP_READ  : 0) |
+        (permission & CFLAT_PERMISSION_WRITE ? FILE_MAP_WRITE : 0);
+
+    void *result = MapViewOfFile(map_handle, map_access, 0, 0, 0);
+
+    CloseHandle(map_handle);
+    CloseHandle(file_handle);
+    return result;
+    
+    #elif defined(OS_UNIX)
+    int flags = (permission & CFLAT_PERMISSION_WRITE) ? O_RDWR : O_RDONLY;
+    int prot = PROT_NONE;
+    if (permission & CFLAT_PERMISSION_READ) prot |= PROT_READ;
+    if (permission & CFLAT_PERMISSION_WRITE) prot |= PROT_WRITE;
+    if (permission & CFLAT_PERMISSION_EXECUTE) prot |= PROT_EXEC;
+    
+    int fd = open(filepath, flags);
+    if (fd == -1) return NULL;
+    
+    struct stat sb;
+    if (fstat(fd, &sb) == -1) { close(fd); return NULL; }
+    
+    void *result = mmap((void*)hint, sb.st_size, prot, MAP_PRIVATE, fd, 0);
+    close(fd);
+    return (result == MAP_FAILED) ? NULL : result;
+    
+    #else
+    #error Unsupported platform
+    #endif
+}
+
+static void cflat__os_unmap_file(void *ptr, usize size) {
+    #if defined(OS_WINDOWS)
+    (void)size;
+    UnmapViewOfFile(ptr);
+    #elif defined(OS_UNIX)
+    munmap(ptr, size);
+    #else
+    #error Unsupported platform
+    #endif
+}
+
+static void  cflat__os_flush_mapped_file(void *ptr, usize size) {
+    #if defined(OS_WINDOWS)
+    FlushViewOfFile(ptr, size);
+    #elif defined(OS_UNIX)
+    msync(ptr, size, MS_SYNC);
+    #else
+    #error Unsupported platform
+    #endif
+}
+
+static bool cflat__os_file_exists(const char *filepath) {
+    #if defined(OS_WINDOWS)
+    DWORD attribs = GetFileAttributesA(filepath);
+    return (attribs != INVALID_FILE_ATTRIBUTES) && !(attribs & FILE_ATTRIBUTE_DIRECTORY);
+    #elif defined(OS_UNIX)
+    struct stat buffer;
+    return (stat(filepath, &buffer) == 0) && S_ISREG(buffer.st_mode);
+    #else
+    #error Unsupported platform
     #endif
 }
 
@@ -214,7 +337,6 @@ void cflat_arena_delete(CflatArena *arena) {
     CflatArenaNode *current = arena->curr;
     CflatArenaNode *node = arena->free;
     CflatArenaNode *it;
-    cflat_mem_zero(arena, sizeof (*arena));
 
     for (it = current; it;) {
         CflatArenaNode *prev = it->prev;
@@ -222,6 +344,12 @@ void cflat_arena_delete(CflatArena *arena) {
             const usize res = it->res;
             ASAN_UNPOISON_MEMORY_REGION(it, res);
             cflat__os_release(it, res);
+            VALGRIND_FREELIKE_BLOCK(it, 0);
+        } else if (cflat_has_flag(it->_arena.flags, CFLAT_MEMORY_MAPPED)) {
+            const usize res = it->res;
+            ASAN_UNPOISON_MEMORY_REGION(it, res);
+            cflat__os_flush_mapped_file(it, res);
+            cflat__os_unmap_file(it, res);
             VALGRIND_FREELIKE_BLOCK(it, 0);
         }
         it = prev;
@@ -234,10 +362,16 @@ void cflat_arena_delete(CflatArena *arena) {
             ASAN_UNPOISON_MEMORY_REGION(it, res);
             cflat__os_release(it, res);
             VALGRIND_FREELIKE_BLOCK(it, 0);
+        } else if (cflat_has_flag(it->_arena.flags, CFLAT_MEMORY_MAPPED)) {
+            const usize res = it->res;
+            ASAN_UNPOISON_MEMORY_REGION(it, res);
+            cflat__os_unmap_file(it, res);
+            VALGRIND_FREELIKE_BLOCK(it, 0);
         }
         it = prev;
     }
 
+    //cflat_mem_zero(arena, sizeof (*arena));
 }
 
 void* cflat_arena_push_opt(CflatArena *arena, const usize size, CflatAllocOpt opt) {
@@ -350,13 +484,13 @@ void cflat_arena_pop(CflatArena *arena, usize size) {
         const usize allocated = curr->pos - sizeof(*curr);
         if (size < allocated) {
             const usize new_pos = curr->pos - size;
-            //ASAN_POISON_MEMORY_REGION(curr->data + new_pos, curr->pos - new_pos);
+            ASAN_POISON_MEMORY_REGION(curr->data + new_pos, curr->pos - new_pos);
             curr->pos = new_pos;
             break;
         }
         size      -= allocated;
         curr->pos -= allocated;
-        //ASAN_POISON_MEMORY_REGION(curr->data, curr->res - sizeof(*curr));
+        ASAN_POISON_MEMORY_REGION(curr->data, curr->res - sizeof(*curr));
         cflat_ll_push(arena->free, curr, prev);
         arena->curr = prev;
         curr = prev;
@@ -416,7 +550,7 @@ void cflat_arena_temp_end(const CflatTempArena temp_arena) {
 cflat_thread_local static CflatArena *cflat__tls_scratches[2] = {0};
 cflat_thread_local static byte cflat__tls_arena_bytes[CFLAT_ARRAY_SIZE(cflat__tls_scratches)][KiB(64)];
 
-CflatTempArena cflat_get_scratch_arena(CflatScratchArenaScopeOpt opt) {
+CflatTempArena cflat_get_scratch_arena_opt(CflatScratchArenaScopeOpt opt) {
     usize conflicts_count = opt.conflicts_count;
     CflatArena **conflicts = opt.conflicts;
     CflatArena *result = NULL;
@@ -460,9 +594,38 @@ void* cflat_arena_top(CflatArena *arena) {
     return (void*)((uptr)arena->curr + arena->curr->pos);
 }
 
+CFLAT_DEF CflatArena* cflat_arena_memory_mapped(const char *filepath, usize hint, CflatPermission permission) {
+    const usize page_size = 4096;
+    hint = cflat_align_pow2(hint, page_size);
+    bool file_exists = cflat__os_file_exists(filepath);    
+    void *mem = cflat__os_memory_mapped_file(filepath, hint, permission);
+    if (mem == NULL) return NULL;
+
+    CflatArenaNode *node = (CflatArenaNode*)mem;
+
+    if (!file_exists) {
+        cflat__node_init(mem, CFLAT_ARENA_FIXED_SIZE | CFLAT_MEMORY_MAPPED, hint, hint);
+    }
+    else {
+        node->_arena.curr = node;
+        if (node->_arena.pos > hint) node->_arena.pos = hint;
+        node->pos = node->_arena.pos;
+    }
+    
+    CflatArena *arena = &((CflatArenaNode*)mem)->_arena;
+    return arena;
+}
+
 #endif //CFLAT_IMPLEMENTATION
 
 #ifndef CFLAT_ARENA_NO_ALIAS
+
+#   define arena_memory_mapped cflat_arena_memory_mapped
+#   define Permission CflatPermission
+#   define ArenaFlags CflatArenaFlags
+#   define PERMISSION_READ CFLAT_PERMISSION_READ
+#   define PERMISSION_WRITE CFLAT_PERMISSION_WRITE
+#   define PERMISSION_EXECUTE CFLAT_PERMISSION_EXECUTE
 
 #   define stackalloc cflat_stackalloc
 #   define mem_copy cflat_mem_copy
@@ -472,6 +635,7 @@ void* cflat_arena_top(CflatArena *arena) {
 #   define arena_init cflat_arena_init
 #   define arena_new cflat_arena_new
 #   define arena_push cflat_arena_push
+#   define arena_extend cflat_arena_extend
 #   define arena_try_push cflat_arena_try_push
 #   define arena_pop cflat_arena_pop
 #   define arena_clear cflat_arena_clear
@@ -479,16 +643,17 @@ void* cflat_arena_top(CflatArena *arena) {
 #   define arena_delete cflat_arena_delete
 #   define arena_top cflat_arena_top
 #   define get_scratch_arena cflat_get_scratch_arena
+#   define drop_scratch_arena cflat_drop_scratch_arena
 #   define scratch_arena_scope cflat_scratch_arena_scope
 #   define arena_scratch_scope cflat_scratch_arena_scope // Discoverability is a hell of a drug
-#   define scope_exit cflat_scope_exit
-#   define exit_scope cflat_scope_exit
 #   define temp_arena_scope cflat_temp_arena_scope
 #   define arena_temp_scope cflat_temp_arena_scope // Discoverability is a hell of a drug
 #   define arena_temp_begin cflat_arena_temp_begin
 #   define arena_temp_end cflat_arena_temp_end
 #   define Arena CflatArena
 #   define TempArena CflatTempArena
+#   define arena_push_struct cflat_arena_push_struct
+#   define arena_push_array cflat_arena_push_array
 
 #endif // CFLAT_ARENA_NO_ALIAS
 

@@ -27,19 +27,51 @@
         (DA)->data[(DA)->length++] = (VAL);                                                                                      \
     } while (0)
 
-#define cflat_slice_append_fixed(ARENA, DA, VAL)                                                                                 \
+#define cflat_slice_append_fixed(DA, VAL)                                                                                        \
     do {                                                                                                                         \
-        if ((DA)->length >= (DA)->capacity) break;                                                                               \
+        (void)cflat_bounds_check((DA)->length, (DA)->capacity);                                                                  \
         (DA)->data[(DA)->length++] = (VAL);                                                                                      \
     } while (0)
 
-#define cflat_slice_remove_unordered(ARENA, DA, INDEX)      \
-    do {                                                    \
-        cflat_slice_at(*(DA), (INDEX)) = (DA)->data[--(DA)->length];   \
+#define cflat_slice_remove_unordered(DA, INDEX)                                                                                  \
+    do {                                                                                                                         \
+        *cflat_slice_at(*(DA), (INDEX)) = (DA)->data[--(DA)->length];                                                            \
+    } while(0)
+
+#define cflat_slice_remove(SLICE, INDEX)                                                                                         \
+    do {                                                                                                                         \
+        if ((usize)(INDEX) < (SLICE)->length) {                                                                                  \
+            cflat_mem_move(&(SLICE)->data[(INDEX)], &(SLICE)->data[(INDEX) + 1],                                                 \
+                    ((SLICE)->length - (INDEX) - 1) * sizeof(*(SLICE)->data));                                                   \
+            (SLICE)->length--;                                                                                                   \
+        }                                                                                                                        \
+    } while(0)
+
+#define cflat_slice_insert(ARENA, SLICE, INDEX, VAL)                                                                             \
+    do {                                                                                                                         \
+            cflat_slice_resize((ARENA), (SLICE), (SLICE)->length + 1);                                                           \
+            cflat_mem_move(&(SLICE)->data[(INDEX) + 1], &(SLICE)->data[(INDEX)],                                                 \
+                    ((SLICE)->length - (INDEX)) * sizeof(*(SLICE)->data));                                                       \
+            (SLICE)->data[(INDEX)] = (VAL);                                                                                      \
+            (SLICE)->length++;                                                                                                   \
+    } while(0)
+
+#define cflat_slice_insert_fixed(SLICE, INDEX, VAL)                                                                              \
+    do {                                                                                                                         \
+            (void)cflat_bounds_check((SLICE)->length, (SLICE)->capacity);                                                        \
+            cflat_mem_move(&(SLICE)->data[(INDEX) + 1], &(SLICE)->data[(INDEX)],                                                 \
+                    ((SLICE)->length - (INDEX)) * sizeof(*(SLICE)->data));                                                       \
+            (SLICE)->data[(INDEX)] = (VAL);                                                                                      \
+            (SLICE)->length++;                                                                                                   \
     } while(0)
 
 #ifndef CFLAT_DA_NO_ALIAS
+#   define slice_resize cflat_slice_resize
 #   define slice_append cflat_slice_append
+#   define slice_remove cflat_slice_remove
+#   define slice_insert cflat_slice_insert
+#   define slice_append_fixed cflat_slice_append_fixed
+#   define slice_insert_fixed cflat_slice_insert_fixed
 #endif // CFLAT_DA_NO_ALIAS
 
 #endif //CFLAT_DA_H

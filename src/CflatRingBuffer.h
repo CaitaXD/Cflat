@@ -3,13 +3,15 @@
 
 #include "CflatCore.h"
 #include "CflatArena.h"
+#include "CflatSlice.h"
+#include <stdatomic.h>
 
 typedef struct cflat_ring_buffer {
-  isize read;
-  isize write;
-  usize length;
-  byte data[];
-} CflatRingBuffer;
+    _Atomic isize read;
+    _Atomic isize write;
+    usize length;
+    byte data[];
+} cflat_may_alias CflatRingBuffer;
 
 typedef struct ring_buffer_new_opt {
     usize align;
@@ -22,12 +24,12 @@ typedef struct ring_buffer_read_opt {
 
 CflatRingBuffer* cflat_ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt);
 
-usize cflat_ring_buffer_count(CflatRingBuffer *rb);
-bool cflat_ring_buffer_is_empty(CflatRingBuffer *rb);
-void cflat_ring_buffer_clear(CflatRingBuffer *rb);
-bool cflat_ring_buffer_write(CflatRingBuffer *rb, usize element_size, const void *src);
-bool cflat_ring_buffer_read_opt(CflatRingBuffer *rb, usize element_size, void *dst, RingBufferReadOpt opt);
-void cflat_ring_buffer_overwrite(CflatRingBuffer *rb, usize element_size, const void *src);
+usize cflat_ring_buffer_count             (CflatRingBuffer *rb                                                        );
+bool cflat_ring_buffer_is_empty           (CflatRingBuffer *rb                                                        );
+void cflat_ring_buffer_clear              (CflatRingBuffer *rb                                                        );
+bool cflat_ring_buffer_write              (CflatRingBuffer *rb, usize element_size, const void *src                   );
+bool cflat_ring_buffer_read_opt           (CflatRingBuffer *rb, usize element_size, void *dst, RingBufferReadOpt opt  );
+void cflat_ring_buffer_overwrite          (CflatRingBuffer *rb, usize element_size, const void *src                   );
 
 #define cflat_ring_buffer_read(rb, element_size, dst, ...) ring_buffer_read_opt(rb, element_size, dst, CFLAT_OPT(RingBufferReadOpt, .clear = false, __VA_ARGS__))
 
@@ -35,13 +37,15 @@ void cflat_ring_buffer_overwrite(CflatRingBuffer *rb, usize element_size, const 
 
 CflatRingBuffer *cflat_ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt) {
     
-    CflatRingBuffer *rb = cflat_arena_push_opt(a, length * element_size + sizeof(CflatRingBuffer), (CflatAllocOpt) {
+    usize real_length = next_pow2(length);
+
+    CflatRingBuffer *rb = cflat_arena_push_opt(a, real_length * element_size + sizeof(CflatRingBuffer), (CflatAllocOpt) {
         .align = opt.align,
         .clear = opt.clear,
     });
 
     rb->read = rb->write = 0;
-    rb->length = next_pow2(length);
+    rb->length = real_length;
     return rb;
 }
 
@@ -121,10 +125,52 @@ usize cflat_ring_buffer_count(CflatRingBuffer *rb) {
     return (rb->length - read) + write;
 }
 
+void cflat_ring_buffer_readable_chunks(CflatRingBuffer *rb, usize element_size, CflatByteSlice chunks[static 2]) {
+    if (rb == NULL) {
+        chunks[0] = (CflatByteSlice){0};
+        chunks[1] = (CflatByteSlice){0};
+        return;
+    }
+    
+    usize read  = atomic_load_explicit(&rb->read, memory_order_acquire);
+    usize write = atomic_load_explicit(&rb->write, memory_order_acquire);
+
+    if (read <= write) {
+        chunks[0] = (CflatByteSlice){ .data = rb->data + (read * element_size), .length = (write - read) * element_size };
+        chunks[1] = (CflatByteSlice){0};
+    } else {
+        chunks[0] = (CflatByteSlice){ .data = rb->data + (read * element_size), .length = (rb->length - read) * element_size };
+        chunks[1] = (CflatByteSlice){ .data = rb->data, .length = write * element_size };
+    }
+}
+
+void cflat_ring_buffer_writable_chunks(CflatRingBuffer *rb, usize element_size, CflatByteSlice chunks[static 2]) {
+    if (rb == NULL) {
+        chunks[0] = (CflatByteSlice){0};
+        chunks[1] = (CflatByteSlice){0};
+        return;
+    }
+    
+    usize read  = atomic_load_explicit(&rb->read, memory_order_acquire);
+    usize write = atomic_load_explicit(&rb->write, memory_order_acquire);
+    
+    if (write >= read) {
+        chunks[0] = (CflatByteSlice){ .data = rb->data + (write * element_size), .length = (rb->length - write) * element_size };
+        chunks[1] = (CflatByteSlice){ .data = rb->data, .length = (read > 0 ? read - 1 : 0) * element_size };
+        if (read == 0 && chunks[0].length > 0) {
+            chunks[0].length -= element_size;
+        }
+    } else {
+        chunks[0] = (CflatByteSlice){ .data = rb->data + (write * element_size), .length = (read - write - 1) * element_size };
+        chunks[1] = (CflatByteSlice){0};
+    }
+}
+
 #endif // CFLAT_IMPLEMENTATION
 
 #if !defined(CFLAT_RING_BUFFER_NO_ALIAS)
-#   define ring_buffer_new cflat_ring_buffer_new
+
+#   define RingBuffer CflatRingBuffer
 #   define ring_buffer_count cflat_ring_buffer_count
 #   define ring_buffer_is_empty cflat_ring_buffer_is_empty
 #   define ring_buffer_write cflat_ring_buffer_write
@@ -133,6 +179,7 @@ usize cflat_ring_buffer_count(CflatRingBuffer *rb) {
 #   define ring_buffer_clear cflat_ring_buffer_clear
 #   define ring_buffer_read_opt cflat_ring_buffer_read_opt
 #   define ring_buffer_new_opt cflat_ring_buffer_new_opt
+
 #endif // CFLAT_RING_BUFFER_NO_ALIAS
 
 #endif //CFLAT_RING_BUFFER_H

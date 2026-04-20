@@ -12,30 +12,40 @@
 #include "CflatAppend.h"
 #include <errno.h>
 
-typedef struct cflat_async_handle { 
+typedef struct cflat_async_handle CflatAsyncHandle;
+typedef struct cflat_async_handle_slice CflatAsyncHandleSlice;
+typedef struct cflat_async_queue CflatAsyncQueue;
+typedef struct cflat_work_queue_item CflatWorkItem;
+typedef struct cflat_semaphore CflatSemaphore;
+
+struct cflat_async_handle { 
     usize index; 
-} CflatAsyncHandle;
+};
+
+struct cflat_async_handle_slice {
+    CFLAT_SLICE_FIELDS(CflatAsyncHandle);
+};
 
 #define cflat_async_handle_is_nil(HANDLE) ((HANDLE).index == 0)
 #define cflat_async_handle_nil() (CflatAsyncHandle) { 0 }
 
-typedef void*(CflatTask)(void* arg);
+typedef void*(CflatAsyncQueueTask)(CflatAsyncQueue *sched, void* userdata);
 
-typedef struct cflat_work_queue_item {
-    CflatTask *task;
+struct cflat_work_queue_item {
+    CflatAsyncQueueTask *task;
     void *userdata;
     void *result;
     atomic_bool ready;
     atomic_bool completed;
-} CflatWorkItem;
+};
 
-typedef struct cflat_semaphore {
+struct cflat_semaphore {
     pthread_mutex_t mutex;
     pthread_cond_t cond;
     usize counter;
-} CflatSemaphore;
+};
 
-typedef struct cflat_async_queue {
+struct cflat_async_queue {
     _Atomic usize  head;
     _Atomic usize  tail;
     usize task_count;
@@ -44,15 +54,17 @@ typedef struct cflat_async_queue {
     pthread_t     *pool;
     CflatSemaphore sem_avaliable;
     atomic_bool running;
-} CflatAsyncQueue;
+};
 
-CflatAsyncQueue* cflat_async_work_queue_new(CflatArena *a, usize max_tasks, usize thread_count);
+CflatAsyncQueue* cflat_async_queue_new(CflatArena *a, usize max_tasks, usize thread_count);
 void cflat_async_queue_join (CflatAsyncQueue *sched);
 void cflat_async_queue_clear(CflatAsyncQueue *sched);
 
-CflatAsyncHandle cflat_async_enqueue(CflatAsyncQueue *sched, CflatTask *task, void *userdata);
-void *cflat_async_queue_result         (CflatAsyncQueue *sched, CflatAsyncHandle handle);
-bool cflat_async_queue_is_completed    (CflatAsyncQueue *sched, CflatAsyncHandle handle);
+CflatAsyncHandle cflat_async_enqueue(CflatAsyncQueue *sched, CflatAsyncQueueTask *task, void *userdata);
+
+void *cflat_async_queue_result        (CflatAsyncQueue *sched, CflatAsyncHandle handle);
+bool cflat_async_queue_is_completed   (CflatAsyncQueue *sched);
+bool cflat_async_handle_is_completed  (CflatAsyncQueue *sched, CflatAsyncHandle handle);
 
 void cflat_sem_init     (CflatSemaphore *sem, usize initial_count);
 void cflat_sem_wait     (CflatSemaphore *sem);
@@ -63,7 +75,7 @@ void cflat_sem_delete   (CflatSemaphore *sem);
 
 #if defined(CFLAT_IMPLEMENTATION)
 
-CflatAsyncHandle cflat_async_enqueue(CflatAsyncQueue *sched, CflatTask *task, void *userdata) {
+CflatAsyncHandle cflat_async_enqueue(CflatAsyncQueue *sched, CflatAsyncQueueTask *task, void *userdata) {
     usize index = atomic_fetch_add_explicit(&sched->head, 1, memory_order_relaxed) + 1;
     if (index >= sched->task_count) return cflat_async_handle_nil();
     
@@ -78,12 +90,13 @@ CflatAsyncHandle cflat_async_enqueue(CflatAsyncQueue *sched, CflatTask *task, vo
     return (CflatAsyncHandle) { .index=index };
 }
 
-bool cflat_async_queue_is_completed(CflatAsyncQueue *sched, CflatAsyncHandle handle) {
+bool cflat_async_handle_is_completed(CflatAsyncQueue *sched, CflatAsyncHandle handle) {
+    if (cflat_async_handle_is_nil(handle)) return true;
     return atomic_load_explicit(&sched->bag[handle.index].completed, memory_order_acquire);
 }
 
 void* cflat_async_queue_result(CflatAsyncQueue *sched, CflatAsyncHandle handle) {
-    if (cflat_async_queue_is_completed(sched, handle)) {
+    if (cflat_async_handle_is_completed(sched, handle)) {
         return sched->bag[handle.index].result;
     }
     return NULL;
@@ -115,7 +128,7 @@ static void cflat__async_queue_call(CflatAsyncQueue *sched) {
             sched_yield(); 
         }
 
-        if (work->task) work->result = work->task(work->userdata);
+        if (work->task) work->result = work->task(sched, work->userdata);
         
         atomic_store_explicit(&work->ready, false, memory_order_release);
         atomic_store_explicit(&work->completed, true, memory_order_release);
@@ -124,6 +137,7 @@ static void cflat__async_queue_call(CflatAsyncQueue *sched) {
 
 void* cflat__async_worker(void *arg) {
     CflatAsyncQueue *sched = (CflatAsyncQueue *)arg;
+    
     while (atomic_load_explicit(&sched->running, memory_order_relaxed)) {
         cflat_sem_wait(&sched->sem_avaliable); 
         cflat__async_queue_call(sched);
@@ -201,24 +215,24 @@ void cflat_sem_delete(CflatSemaphore *sem) {
     pthread_cond_destroy(&sem->cond);
 }
 
-CflatAsyncQueue* cflat_async_work_queue_new(CflatArena *a, usize max_tasks, usize thread_count) {    
-    CflatAsyncQueue *sched = cflat_arena_push(a, sizeof(*sched), .clear=false);
+CflatAsyncQueue* cflat_async_queue_new(CflatArena *a, usize max_tasks, usize thread_count) {    
+    CflatAsyncQueue *sched = cflat_arena_push(a, sizeof(CflatAsyncQueue), .clear=true);
     *sched = (CflatAsyncQueue) {
-        .running      = true,
         .bag          = cflat_arena_push(a, (max_tasks + 1)*sizeof(*sched->bag),  .clear=true),
         .pool         = cflat_arena_push(a, (thread_count )*sizeof(*sched->pool), .clear=true),
         .task_count    = max_tasks + 1,
         .thread_count = thread_count,
     };
+    return sched;
+}
 
+void cflat_async_queue_start(CflatAsyncQueue* sched) {
+    atomic_store_explicit(&sched->running, true, memory_order_release);
     cflat_sem_init(&sched->sem_avaliable, 0);
-
-    for (usize i = 0; i < thread_count; ++i) {
+    for (usize i = 0; i < sched->thread_count; ++i) {
         pthread_t *th = &sched->pool[i];
         (void)pthread_create(th, NULL, cflat__async_worker, sched);
     }
-
-    return sched;
 }
 
 void cflat_async_queue_join(CflatAsyncQueue *sched) {
@@ -231,6 +245,17 @@ void cflat_async_queue_join(CflatAsyncQueue *sched) {
             cflat__async_queue_call(sched);
         }
     }
+}
+
+bool cflat_async_queue_is_completed(CflatAsyncQueue *sched) {
+    usize tail = atomic_load_explicit(&sched->tail, memory_order_acquire) + 1;
+    usize head = atomic_load_explicit(&sched->head, memory_order_acquire) + 1;
+    if (head == 1) return false;
+
+    for (usize i = tail; i < head; ++i)
+        if (!atomic_load_explicit(&sched->bag[i].completed, memory_order_acquire))
+            return false;
+    return true;
 }
 
 void cflat_async_queue_clear(CflatAsyncQueue *sched) {
@@ -249,8 +274,23 @@ void cflat_async_queue_shutdown(CflatAsyncQueue *sched) {
         }
     }
     cflat_sem_delete(&sched->sem_avaliable);
+
+    mem_zero(sched->pool, sched->thread_count*sizeof(*sched->pool));
+    mem_zero(sched->bag, sched->task_count*sizeof(*sched->bag));
 }
 
 #endif // CFLAT_IMPLEMENTATION
+
+#if !defined(CFLAT_ASYNC_NO_ALIAS)
+
+#   define AsyncQueue CflatAsyncQueue
+#   define AsyncHandle CflatAsyncHandle
+#   define AsyncHandleSlice CflatAsyncHandleSlice
+#   define async_enqueue cflat_async_enqueue
+#   define async_handle_nil cflat_async_handle_nil
+#   define async_handle_is_nil cflat_async_handle_is_nil
+#   define async_handle_is_completed cflat_async_handle_is_completed
+
+#endif
 
 #endif // CFLAT_ASYNC_H

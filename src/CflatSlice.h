@@ -79,6 +79,7 @@ CflatByteSlice cflat__slice_new_opt(usize element_size, CflatArena *a, usize len
 
 #ifndef CFLAT_SLICE_NO_ALIAS
 
+#   define ByteSlice CflatByteSlice
 #   define slice_data cflat_slice_data
 #   define slice_new cflat_slice_new
 #   define slice_length cflat_slice_length
