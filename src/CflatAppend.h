@@ -27,10 +27,22 @@
         (DA)->data[(DA)->length++] = (VAL);                                                                                      \
     } while (0)
 
+#define cflat_slice_emplace(ARENA, DA, ...)                                                                                      \
+    do {                                                                                                                         \
+        cflat_slice_resize((ARENA), (DA), (DA)->length + 1);                                                                     \
+        (DA)->data[(DA)->length++] = ((cflat_typeof(*(DA)->data)){__VA_ARGS__});                                                 \
+    } while (0)
+
 #define cflat_slice_append_fixed(DA, VAL)                                                                                        \
     do {                                                                                                                         \
         (void)cflat_bounds_check((DA)->length, (DA)->capacity);                                                                  \
         (DA)->data[(DA)->length++] = (VAL);                                                                                      \
+    } while (0)
+
+#define cflat_slice_emplace_fixed(ARENA, DA, ...)                                                                                \
+    do {                                                                                                                         \
+        (void)cflat_bounds_check((DA)->length, (DA)->capacity);                                                                  \
+        (DA)->data[(DA)->length++] = ((cflat_typeof(*(DA)->data)){__VA_ARGS__});                                                 \
     } while (0)
 
 #define cflat_slice_remove_unordered(DA, INDEX)                                                                                  \

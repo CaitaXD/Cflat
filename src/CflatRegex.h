@@ -6,26 +6,40 @@
 #include "CflatSlice.h"
 #include "CflatString.h"
 #include "CflatAppend.h"
+#include <iso646.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
-#define cflat__nfa_epsilon (0)
+#ifndef CFLAT__SLICE_U32
+
+#define CFLAT__SLICE_U32
+
+typedef struct cflat_slice_u32 {
+    CFLAT_SLICE_FIELDS(u32);
+} CflatSliceU32;
+
+#endif //CFLAT__SLICE_U32
+
+#define cflat__nfa_epsilon UINT32_MAX
+
+typedef struct cflat_adj_node_u32 {
+    u32 u, v;
+    struct cflat_adj_node_u32 *next; 
+} CflatAdjNodeU32;
 
 typedef struct cflat_adj_u32 {
-    u32 u;             
-    u32 v;
-    struct cflat_adj_u32 *next; 
+    CFLAT_SLICE_FIELDS(CflatAdjNodeU32*);
 } CflatAdjU32;
 
 typedef struct cflat_nfa {
-    CflatArena   *arena;
-    usize states_count;
-    CflatAdjU32 **states;
+    CflatArena    *arena;
+    CflatAdjU32   states;
+    CflatSliceU32 groups;
+    u32           start;
+    bool          nullable;
 } CflatNfa;
-
-typedef struct cflat_state_slice {
-    CFLAT_SLICE_FIELDS(u8);
-} CflatStaceSlice;
 
 cflat_enum(CflatPatternOptions, u8) {
     CFLAT_MATCH_ONE            = 0x00,  //   Flag (1)
@@ -43,32 +57,30 @@ cflat_enum(CflatMatchOptions, u8) {
     CFLAT_MATCH_EXACT         = CFLAT_MATCH_BEGIN | CFLAT_MATCH_END,
 };
 
-#endif
-
 CflatNfa cflat_nfa_new(CflatArena *arena);
 // Capture Group
 void cflat_nfa_begin_group(CflatNfa *nfa);
 void cflat_nfa_match_opt(CflatNfa *nfa, CflatStringView pattern, CflatPatternOptions opt);
 // (Previous pattern or "") | pattern 
 void cflat_nfa_or_opt(CflatNfa *nfa, CflatStringView pattern, CflatPatternOptions opt);
-void cflat_nfa_end_group_opt(CflatNfa *nfa, CflatMatchOptions opt);
+void cflat_nfa_end_group_opt(CflatNfa *nfa, CflatPatternOptions opt);
 
 CflatStringView cflat_nfa_matches(CflatNfa nfa, CflatStringView text);
 bool cflat_nfa_match_next(CflatNfa nfa, CflatStringView *match, const CflatStringView text); 
 
+#endif //CFLAT_CFLAT_REGEX_H
+
 #ifdef CFLAT_IMPLEMENTATION
 
 CflatNfa cflat_nfa_new(CflatArena *arena) {
-    return (CflatNfa) {
-        .arena = arena
-    };
+    return (CflatNfa) { .arena = arena };
 }
 
-static void cflat__nfa_trnasition(CflatNfa *nfa, u32 from, u32 match, u32 to) {
-    CflatAdjU32 *node = cflat_arena_push(nfa->arena, sizeof(*node));
+static void cflat__nfa_add_transition(CflatArena *arena, CflatAdjNodeU32 **stack, u32 match, u32 dst) {
+    CflatAdjNodeU32 *node = cflat_arena_push_struct(CflatAdjNodeU32, arena);
     node->u = match;
-    node->v = to;
-    cflat_ll_push(nfa->states[from], node, next);
+    node->v = dst;
+    cflat_ll_push(*stack, node, next);
 }
 
 static char cflat__flip_case(char c) {
@@ -79,135 +91,202 @@ static char cflat__flip_case(char c) {
 }
 
 void cflat_nfa_match_opt(CflatNfa *nfa, CflatStringView pattern, CflatPatternOptions opt) {
-    if (nfa->states_count == 0) {
-        nfa->states = cflat_arena_push(nfa->arena, sizeof(CflatAdjU32*) * 1024);
-        cflat_mem_zero(nfa->states, sizeof(CflatAdjU32*) * 1024);
-        nfa->states_count = 1;
+    CflatArena *arena = nfa->arena;
+
+    if (nfa->states.length == 0) {
+        cflat_slice_resize(arena, &nfa->states, pattern.length);
+        nfa->states.length = 1;
     }
 
-    u32 start_state   = (u32)nfa->states_count - 1;
-    usize pattern_len = pattern.length;
-    u32 end_state     = start_state + (u32)pattern_len;
+    u32 start_state   = (u32)nfa->states.length - 1;
+    u32 end_state     = start_state + (u32)pattern.length;
     
     bool match_any  = (opt & CFLAT_MATCH_ZERO_OR_MORE);
+    bool match_0or1 = (opt & CFLAT_MATCH_ZERO_OR_ONE );
     bool match_many = (opt & CFLAT_MATCH_ONE_OR_MORE );
     bool match_one  = (opt & CFLAT_MATCH_ZERO_OR_ONE );
     bool case_ins   = (opt & CFLAT_CASE_INSENSTIVE   );
 
     if (match_any || match_one) {
-        cflat__nfa_trnasition(nfa, start_state, cflat__nfa_epsilon, end_state);
+        cflat__nfa_add_transition(arena, &nfa->states.data[start_state], cflat__nfa_epsilon, end_state);
     }
 
-    for (usize i = 0; i < pattern_len; ++i) {
+    for (usize i = 0; i < pattern.length; ++i) {
         u32 q = start_state + (u32)i;
         u8  c = (u8)pattern.data[i];
+        CflatAdjNodeU32 **head = &nfa->states.data[q];
         
-        cflat__nfa_trnasition(nfa, q, c, q + 1);
-
+        cflat__nfa_add_transition(arena, head, c, q + 1);
         if (case_ins) {
             u8 f = cflat__flip_case(c);
             if (f != 0 && f != c) {
-                cflat__nfa_trnasition(nfa, q, f, q + 1);
+                cflat__nfa_add_transition(arena, head, f, q + 1);
             }
         }
     }
 
     if (match_any || match_many) {
-        cflat__nfa_trnasition(nfa, end_state, cflat__nfa_epsilon, start_state);
+        cflat__nfa_add_transition(arena, &nfa->states.data[end_state], cflat__nfa_epsilon, start_state);
     }
 
-    nfa->states_count = end_state + 1;
+    if (pattern.length == 0 || match_any || match_0or1) {
+        nfa->nullable = true;
+    }
+
+    nfa->states.length = end_state + 1;
 }
 
-static void cflat__nfa_expand_stack(CflatNfa nfa, u8 *states, u32 *epsilons, usize *curr_epsilon) {
-    while (*curr_epsilon > 0) {
-        u32 s = epsilons[--(*curr_epsilon)];
-        for (CflatAdjU32 *t = nfa.states[s]; t != NULL; t = t->next) {
+static void cflat__nfa_expand_stack(CflatNfa nfa, u8 *states, u32 *epsilons, usize *epsilon_index) {
+    while (*epsilon_index > 0) {
+        u32 s = epsilons[--(*epsilon_index)];
+        for (CflatAdjNodeU32 *t = nfa.states.data[s]; t != NULL; t = t->next) {
             if (t->u == cflat__nfa_epsilon) {
                 u32 target = t->v;
                 if (!states[target]) {
                     states[target] = 1;
-                    epsilons[(*curr_epsilon)++] = target;
+                    epsilons[(*epsilon_index)++] = target;
                 }
             }
         }
+    }
+}
+
+void cflat_nfa_begin_group(CflatNfa *nfa) {
+    u32 entry = (nfa->states.length == 0) ? 0 : (u32)nfa->states.length - 1;
+
+    cflat_slice_append(nfa->arena, &nfa->groups, entry);
+}
+
+void cflat_nfa_end_group_opt(CflatNfa *nfa, CflatPatternOptions opt) {
+    if (nfa->groups.length == 0 || nfa->states.length == 0) {
+        return;
+    }
+
+    bool is_root_group = (nfa->groups.length == 1);
+    u32 start = nfa->groups.data[nfa->groups.length - 1];
+    u32 end = (u32)nfa->states.length - 1;
+
+    bool match_any  = (opt & CFLAT_MATCH_ZERO_OR_MORE);
+    bool match_0or1 = (opt & CFLAT_MATCH_ZERO_OR_ONE );
+    bool match_many = (opt & CFLAT_MATCH_ONE_OR_MORE );
+    bool match_one  = (opt == CFLAT_MATCH_ONE);
+
+    if (match_any || match_0or1 || match_one) {
+        cflat__nfa_add_transition(nfa->arena, &nfa->states.data[start], cflat__nfa_epsilon, end);
+    }
+
+    if (match_any || match_many) {
+        cflat__nfa_add_transition(nfa->arena, &nfa->states.data[end], cflat__nfa_epsilon, start);
+    }
+
+    if (match_any || match_0or1) {
+        nfa->nullable = true;
+    }
+
+    if (is_root_group) {
+        nfa->start = start;
+    }
+
+    nfa->groups.length--;
+}
+
+void cflat_nfa_or_opt(CflatNfa *nfa, CflatStringView pattern, CflatPatternOptions opt) {
+    CflatArena *arena = nfa->arena;
+    
+    u32 anchor = nfa->start; 
+    if (nfa->groups.length > 0) {
+        anchor = nfa->groups.data[nfa->groups.length - 1];
+    }
+
+    u32 lhs_end = (u32)nfa->states.length - 1;
+    u32 fork_state = (u32)nfa->states.length;
+    cflat_slice_resize(arena, &nfa->states, nfa->states.length + 1);
+    nfa->states.length++;
+    
+    cflat__nfa_add_transition(arena, &nfa->states.data[fork_state], cflat__nfa_epsilon, anchor);
+
+    u32 rhs_start = (u32)nfa->states.length;
+    cflat_nfa_match_opt(nfa, pattern, opt);
+    u32 rhs_end = (u32)nfa->states.length - 1;
+
+    cflat__nfa_add_transition(arena, &nfa->states.data[fork_state], cflat__nfa_epsilon, rhs_start);
+
+    u32 join_state = (u32)nfa->states.length;
+    cflat_slice_resize(arena, &nfa->states, nfa->states.length + 1);
+    nfa->states.length++;
+
+    cflat__nfa_add_transition(arena, &nfa->states.data[lhs_end], cflat__nfa_epsilon, join_state);
+    cflat__nfa_add_transition(arena, &nfa->states.data[rhs_end], cflat__nfa_epsilon, join_state);
+
+    if (nfa->groups.length > 0) {
+        nfa->groups.data[nfa->groups.length - 1] = fork_state;
+    } else {
+        nfa->start = fork_state;
     }
 }
 
 CflatStringView cflat_nfa_matches(CflatNfa nfa, CflatStringView text) {
     CflatStringView result = {0};
     
-    if (nfa.states_count == 0) 
+    if (nfa.states.length == 0) 
         return result;
 
     CflatTempArena temp;
     cflat_scratch_arena_scope(temp, 1, &nfa.arena) {
-
-        u8 *curr_states    = cflat_arena_push(temp.arena, sizeof *curr_states  * nfa.states_count);
-        u8 *next_states    = cflat_arena_push(temp.arena, sizeof *next_states  * nfa.states_count);
+        u8 *curr_states    = cflat_arena_push_array(u8,    temp.arena, nfa.states.length);
+        u8 *next_states    = cflat_arena_push_array(u8,    temp.arena, nfa.states.length);
+        char **curr_starts = cflat_arena_push_array(char*, temp.arena, nfa.states.length);
+        char **next_starts = cflat_arena_push_array(char*, temp.arena, nfa.states.length);
+        u32 *epsilons      = cflat_arena_push_array(u32,   temp.arena, nfa.states.length);
         
-        char **curr_starts = cflat_arena_push(temp.arena, sizeof *curr_starts  * nfa.states_count);
-        char **next_starts = cflat_arena_push(temp.arena, sizeof *next_starts  * nfa.states_count);
-        
-        u32 *epsilons = cflat_arena_push(temp.arena, sizeof *epsilons * nfa.states_count);
-        usize curr_epsilon = 0;
-        
-        u32 last_index = (u32)nfa.states_count - 1;
+        u32 last_index = (u32)nfa.states.length - 1;
 
         for (usize start_index = 0; start_index <= text.length; ++start_index) {
-            cflat_mem_zero(curr_states, nfa.states_count);
-            curr_epsilon = 0;
+            cflat_mem_zero(curr_states, nfa.states.length);
+            usize epsilon_index = 0;
 
-            curr_states[0] = 1;
-            curr_starts[0] = text.data + start_index;
-            epsilons[curr_epsilon++] = 0;
+            curr_states[nfa.start]    = 1;
+            curr_starts[nfa.start]    = (char*)text.data + start_index;
+            epsilons[epsilon_index++] = nfa.start;
             
-            cflat__nfa_expand_stack(nfa, curr_states, epsilons, &curr_epsilon);
-            for (u32 j = 0; j < nfa.states_count; ++j) {
-                if (curr_states[j]) curr_starts[j] = text.data + start_index;
-            }
+            cflat__nfa_expand_stack(nfa, curr_states, epsilons, &epsilon_index);
 
-            if (curr_states[last_index]) {
-                if (result.data == NULL) {
-                    result.data = (char*)text.data + start_index;
-                    result.length = 0;
-                }
+            if (curr_states[last_index] && nfa.nullable) {
+                result.data = (char*)text.data + start_index;
+                result.length = 0;
             }
 
             for (usize i = start_index; i < text.length; ++i) {
-                cflat_mem_zero(next_states, nfa.states_count);
-                curr_epsilon = 0;
+                cflat_mem_zero(next_states, nfa.states.length);
+                epsilon_index = 0;
                 u8 c = (u8)text.data[i];
 
-                for (u32 s = 0; s < (u32)nfa.states_count; ++s) {
+                for (u32 s = 0; s < (u32)nfa.states.length; ++s) {
                     if (!curr_states[s]) continue;
 
-                    for (CflatAdjU32 *t = nfa.states[s]; t != NULL; t = t->next) {
+                    for (CflatAdjNodeU32 *t = nfa.states.data[s]; t != NULL; t = t->next) {
                         if (t->u == c) {
                             if (!next_states[t->v]) {
                                 next_states[t->v] = 1;
                                 next_starts[t->v] = curr_starts[s];
-                                epsilons[curr_epsilon++] = t->v;
+                                epsilons[epsilon_index++] = t->v;
                             }
                         }
                     }
                 }
 
-                if (curr_epsilon == 0) break;
+                if (epsilon_index == 0) break;
 
-                cflat__nfa_expand_stack(nfa, next_states, epsilons, &curr_epsilon);
-                for (u32 j = 0; j < nfa.states_count; ++j) {
-                    if (next_states[j]) next_starts[j] = text.data + start_index;
-                }
+                cflat__nfa_expand_stack(nfa, next_states, epsilons, &epsilon_index);
                 
-                cflat_swap(void*, curr_states, next_states);
-                cflat_swap(void*, curr_starts, next_starts);
+                cflat_swap(u8*,    curr_states, next_states);
+                cflat_swap(char**, curr_starts, next_starts);
 
                 if (curr_states[last_index]) {
-                    usize curr_states_match_len = (i + 1) - start_index;
-                    if (result.data == NULL || curr_states_match_len > result.length) {
+                    usize curr_len = (i + 1) - start_index;
+                    if (result.data == NULL || curr_len >= result.length) {
                         result.data = (char*)text.data + start_index;
-                        result.length = curr_states_match_len;
+                        result.length = curr_len;
                     }
                 }
             }
@@ -243,4 +322,4 @@ bool cflat_nfa_match_next(CflatNfa nfa, CflatStringView *match, const CflatStrin
     return false;
 }
 
-#endif
+#endif //CFLAT_IMPLEMENTATION

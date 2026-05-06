@@ -87,12 +87,17 @@ CFLAT_DEF void           cflat_drop_scratch_arena    (const CflatTempArena temp_
 #define cflat_arena_try_push(a, size, mem, ...)           cflat_arena_try_push_opt((a), (size), (mem), CFLAT_OPT(CflatAllocOpt, .align = cflat_alignof(uptr), __VA_ARGS__))
 #define cflat_arena_extend(a, ptr, oldsize, newsize, ...) cflat_arena_extend_opt((a), (ptr), (oldsize), (newsize), CFLAT_OPT(CflatAllocOpt, .align = cflat_alignof(uptr), __VA_ARGS__))
 #define cflat_temp_arena_scope(arena)                     cflat_defer(TempArena CONCAT(_t, __LINE__) = cflat_arena_temp_begin((arena)), cflat_arena_temp_end(CONCAT(_t, __LINE__)))
+
 #define cflat_arena_push_struct(T, ARENA, ...) (T*)cflat_mem_copy(             \
     arena_push(ARENA, sizeof(T), .clear=false, .align=cflat_alignof(T)),       \
     (&(T){__VA_ARGS__}),                                                       \
     sizeof(T)                                                                  \
 )
-#define cflat_arena_push_array(a, T, N) ((T*)cflat_arena_push((a), sizeof(T)*(N)))
+
+#define cflat_arena_push_array(T, ARENA, N, ...) ((T*)cflat_arena_push((ARENA), sizeof(T)*(N), __VA_ARGS__))
+
+#define cflat_arena_push_ptr(ARENA, ...) (cflat_arena_push((ARENA), sizeof(void*), __VA_ARGS__))
+
 #define cflat_get_scratch_arena(...) cflat_get_scratch_arena_opt((CflatScratchArenaScopeOpt) {__VA_ARGS__})
 
 #define CFLAT_ARRAY_SPLAT(ARRAY) CFLAT_ARRAY_SIZE((ARRAY)), (ARRAY)
