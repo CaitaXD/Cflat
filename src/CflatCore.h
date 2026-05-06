@@ -157,6 +157,9 @@ typedef SSIZE_T ssize_t;
 
 */
 
+#define cflat_min(A,B) (((A)<(B))?(A):(B))
+#define cflat_max(A,B) (((A)>(B))?(A):(B))
+
 #if defined(C23_OR_GREATER)
 #   define cflat_typeof typeof
 #   define cflat_alignof alignof
@@ -338,6 +341,8 @@ typedef u8 byte;
 #endif // CFLAT_IMPLEMENTATION
 
 #if !defined(CFLAT_NO_ALIAS)
+#   define min cflat_min
+#   define max cflat_max
 #   if !defined(assert)
 #       define assert cflat_assert
 #   endif

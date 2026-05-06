@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include "CflatCore.h"
 #include "CflatBit.h"
-#include "CflatMath.h"
 
 #define cflat_stackalloc(SIZE) ((void*)((byte[(SIZE)]){0}))
 
@@ -126,6 +125,8 @@ typedef void* HWND;
 #include <winbase.h>
 #elif defined(OS_UNIX)
 #include <sys/mman.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #endif
 
 static void *cflat__os_reserve(usize size)
