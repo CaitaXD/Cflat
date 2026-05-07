@@ -15,6 +15,12 @@ void cflat_fft_c32(const usize fft_size, c32 *restrict out, const c32 *restrict 
 void cflat_ifft_c32(const usize fft_size, c32 *restrict out, const c32 *restrict in);
 
 #if defined(CFLAT_IMPLEMENTATION)
+#define CFLAT_FFT_IMPLEMENTATION
+#endif
+
+#endif //CFLAT_FFT_H
+
+#if defined(CFLAT_FFT_IMPLEMENTATION)
 
 /* ============================================================================================== */
 /*                                 Twiddle Lookup Table                                           */
@@ -247,5 +253,5 @@ void cflat_ifft_c32(const usize fft_size, c32 *restrict out, const c32 *restrict
         out[k] *= scale;
 }
 
-#endif // CFLAT_IMPLEMENTATION
-#endif //CFLAT_FFT_H
+#endif // CFLAT_FFT_IMPLEMENTATION
+#undef CFLAT_FFT_IMPLEMENTATION

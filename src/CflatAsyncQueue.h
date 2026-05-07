@@ -74,6 +74,12 @@ bool cflat_sem_trywait  (CflatSemaphore *sem);
 void cflat_sem_delete   (CflatSemaphore *sem);
 
 #if defined(CFLAT_IMPLEMENTATION)
+#define CFLAT_ASYNC_IMPLEMENTATION
+#endif
+
+#endif // CFLAT_ASYNC_H
+
+#if defined(CFLAT_ASYNC_IMPLEMENTATION)
 
 CflatAsyncHandle cflat_async_enqueue(CflatAsyncQueue *sched, CflatAsyncQueueTask *task, void *userdata) {
     usize index = atomic_fetch_add_explicit(&sched->head, 1, memory_order_relaxed) + 1;
@@ -279,18 +285,33 @@ void cflat_async_queue_shutdown(CflatAsyncQueue *sched) {
     mem_zero(sched->bag, sched->task_count*sizeof(*sched->bag));
 }
 
-#endif // CFLAT_IMPLEMENTATION
+#endif // CFLAT_ASYNC_IMPLEMENTATION
+#undef CFLAT_ASYNC_IMPLEMENTATION
 
 #if !defined(CFLAT_ASYNC_NO_ALIAS)
 
 #   define AsyncQueue CflatAsyncQueue
 #   define AsyncHandle CflatAsyncHandle
 #   define AsyncHandleSlice CflatAsyncHandleSlice
+#   define Semaphore CflatSemaphore
+#   define WorkItem CflatWorkItem
+#   define async_queue_new cflat_async_queue_new
+#   define async_queue_start cflat_async_queue_start
+#   define async_queue_join cflat_async_queue_join
+#   define async_queue_clear cflat_async_queue_clear
+#   define async_queue_shutdown cflat_async_queue_shutdown
+#   define async_queue_result cflat_async_queue_result
+#   define async_queue_is_completed cflat_async_queue_is_completed
 #   define async_enqueue cflat_async_enqueue
 #   define async_handle_nil cflat_async_handle_nil
 #   define async_handle_is_nil cflat_async_handle_is_nil
 #   define async_handle_is_completed cflat_async_handle_is_completed
+#   define sem_init cflat_sem_init
+#   define sem_wait cflat_sem_wait
+#   define sem_post cflat_sem_post
+#   define sem_timedwait cflat_sem_timedwait
+#   define sem_trywait cflat_sem_trywait
+#   define sem_reset cflat_sem_reset
+#   define sem_delete cflat_sem_delete
 
 #endif
-
-#endif // CFLAT_ASYNC_H

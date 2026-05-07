@@ -50,6 +50,12 @@ CFLAT_DEF u64(cflat_log2_u64)(u64 x);
 )(x)
 
 #if defined(CFLAT_IMPLEMENTATION)
+#define CFLAT_BIT_IMPLEMENTATION
+#endif
+
+#endif //CFLAT_BIT_H
+
+#if defined(CFLAT_BIT_IMPLEMENTATION)
 
 i8 (cflat_next_pow2_i8)(i8 x) {
     if (x <= 1) return 1;
@@ -255,7 +261,8 @@ u32 cflat_log2_u32(u32 x) {
     return cflat__log2_lut_32[(u32)(x*0x07C4ACDD) >> 27];
 }
 
-#endif // CFLAT_IMPLEMENTATION
+#endif // CFLAT_BIT_IMPLEMENTATION
+#undef CFLAT_BIT_IMPLEMENTATION
 
 #if !defined(CFLAT_NO_ALIAS)
 #   define align_pow2 cflat_align_pow2
@@ -263,5 +270,3 @@ u32 cflat_log2_u32(u32 x) {
 #   define next_pow2 cflat_next_pow2
 #   define prev_pow2 cflat_prev_pow2
 #endif // CFLAT_NO_ALIAS
-
-#endif //CFLAT_BIT_H

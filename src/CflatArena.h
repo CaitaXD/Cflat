@@ -105,6 +105,12 @@ CFLAT_DEF void           cflat_drop_scratch_arena    (const CflatTempArena temp_
 #define cflat_scratch_arena_scope(tmp, ...) cflat_defer(tmp = cflat_get_scratch_arena_opt((CflatScratchArenaScopeOpt) {__VA_ARGS__}), cflat_drop_scratch_arena((tmp)))
 
 #if defined(CFLAT_IMPLEMENTATION)
+#define CFLAT_ARENA_IMPLEMENTATION
+#endif
+
+#endif //CFLAT_ARENA_H
+
+#if defined(CFLAT_ARENA_IMPLEMENTATION)
 
 #if ASAN_ENABLED
 #include <sanitizer/asan_interface.h>
@@ -622,7 +628,8 @@ CFLAT_DEF CflatArena* cflat_arena_memory_mapped(const char *filepath, usize hint
     return arena;
 }
 
-#endif //CFLAT_IMPLEMENTATION
+#endif //CFLAT_ARENA_IMPLEMENTATION
+#undef CFLAT_ARENA_IMPLEMENTATION
 
 #ifndef CFLAT_ARENA_NO_ALIAS
 
@@ -662,5 +669,3 @@ CFLAT_DEF CflatArena* cflat_arena_memory_mapped(const char *filepath, usize hint
 #   define arena_push_array cflat_arena_push_array
 
 #endif // CFLAT_ARENA_NO_ALIAS
-
-#endif //CFLAT_ARENA_H

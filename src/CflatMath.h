@@ -87,6 +87,12 @@ CFLAT_DEF c32 cflat_sexpdecay_c32(c32 a, c32 b, f32 decay, f32 dt);
 #define cflat_abs(A)   (((A)<0) ? (-(A)) : ((A)))
 
 #if defined(CFLAT_IMPLEMENTATION)
+#define CFLAT_MATH_IMPLEMENTATION
+#endif
+
+#endif //CFATLATMATH_H
+
+#if defined(CFLAT_MATH_IMPLEMENTATION)
 
 f32 cflat_ilerp_f32(f32 a, f32 b, f32 t) {
     return (t - a) / (b - a);
@@ -143,7 +149,8 @@ f32 cflat_remap_f32(f32 start1, f32 stop1, f32 start2, f32 stop2, float value) {
     return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
 }
 
-#endif // CFLAT_IMPLEMENTATION
+#endif // CFLAT_MATH_IMPLEMENTATION
+#undef CFLAT_MATH_IMPLEMENTATION
 
 #if !defined(CFLAT_MATH_NO_ALIAS)
 
@@ -159,5 +166,3 @@ f32 cflat_remap_f32(f32 start1, f32 stop1, f32 start2, f32 stop2, float value) {
 #   define clamp_f32 cflat_clamp_f32
 
 #endif // CFLAT_MATH_NO_ALIAS
-
-#endif //CFATLATMATH_H

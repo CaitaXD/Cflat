@@ -34,6 +34,12 @@ void cflat_ring_buffer_overwrite          (CflatRingBuffer *rb, usize element_si
 #define cflat_ring_buffer_read(rb, element_size, dst, ...) ring_buffer_read_opt(rb, element_size, dst, CFLAT_OPT(RingBufferReadOpt, .clear = false, __VA_ARGS__))
 
 #if defined(CFLAT_IMPLEMENTATION)
+#define CFLAT_RING_BUFFER_IMPLEMENTATION
+#endif
+
+#endif //CFLAT_RING_BUFFER_H
+
+#if defined(CFLAT_RING_BUFFER_IMPLEMENTATION)
 
 CflatRingBuffer *cflat_ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt) {
     
@@ -166,7 +172,8 @@ void cflat_ring_buffer_writable_chunks(CflatRingBuffer *rb, usize element_size, 
     }
 }
 
-#endif // CFLAT_IMPLEMENTATION
+#endif // CFLAT_RING_BUFFER_IMPLEMENTATION
+#undef CFLAT_RING_BUFFER_IMPLEMENTATION
 
 #if !defined(CFLAT_RING_BUFFER_NO_ALIAS)
 
@@ -179,7 +186,7 @@ void cflat_ring_buffer_writable_chunks(CflatRingBuffer *rb, usize element_size, 
 #   define ring_buffer_clear cflat_ring_buffer_clear
 #   define ring_buffer_read_opt cflat_ring_buffer_read_opt
 #   define ring_buffer_new_opt cflat_ring_buffer_new_opt
+#   define ring_buffer_readable_chunks cflat_ring_buffer_readable_chunks
+#   define ring_buffer_writable_chunks cflat_ring_buffer_writable_chunks
 
 #endif // CFLAT_RING_BUFFER_NO_ALIAS
-
-#endif //CFLAT_RING_BUFFER_H

@@ -337,8 +337,15 @@ typedef u8 byte;
 #endif // CFLAT_NO_TYPEDEF_STDINT
 
 #if defined(CFLAT_IMPLEMENTATION)
+#define CFLAT_CORE_IMPLEMENTATION
+#endif
 
-#endif // CFLAT_IMPLEMENTATION
+#endif //CFLAT_DEF_H
+
+#if defined(CFLAT_CORE_IMPLEMENTATION)
+
+#endif // CFLAT_CORE_IMPLEMENTATION
+#undef CFLAT_CORE_IMPLEMENTATION
 
 #if !defined(CFLAT_NO_ALIAS)
 #   define min cflat_min
@@ -377,5 +384,3 @@ typedef u8 byte;
 #   define lvalue cflat_lvalue
 #   define lvalue_cast cflat_lvalue_cast
 #endif // CFLAT_NO_ALIAS
-
-#endif //CFLAT_DEF_H

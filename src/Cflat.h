@@ -4,7 +4,7 @@
     Conventions:
         - All library functions must be prefixed with cflat_
         - Internal functions must be prefixed with cflat__
-        - All must library functions have an alias without the cflat_ prefix, which can be disabled with by defining CFLAT_NO_ALIAS to 1
+        - All library functions have an alias without the cflat_ prefix, which can be disabled with by defining CFLAT_XXX_NO_ALIAS to 1
 
         - Types of constructors:
             - cflat_xxx_alloc: Allocates memory for an object and returns a pointer to it

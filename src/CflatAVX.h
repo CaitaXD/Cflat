@@ -79,6 +79,12 @@ CFLAT_DEF CflatVec256f cflat_sub_v256f(CflatVec256f x, CflatVec256f y);
 CFLAT_DEF CflatVec256f cflat_scale_v256f(CflatVec256f x, f32 s);
 
 #if defined(CFLAT_IMPLEMENTATION)
+#define CFLAT_AVX_IMPLEMENTATION
+#endif
+
+#endif //CFLAT_AVX_H
+
+#if defined(CFLAT_AVX_IMPLEMENTATION)
 
 /* ============================================================================================== */
 /*                                 CflatVec256cf                                                  */
@@ -332,7 +338,8 @@ CflatVec256f cflat_scale_v256f(CflatVec256f x, f32 s) {
     #endif
 }
 
-#endif // CFLAT_IMPLEMENTATION
+#endif // CFLAT_AVX_IMPLEMENTATION
+#undef CFLAT_AVX_IMPLEMENTATION
 
 #if !defined(CFLAT_AVX_NO_ALIAS)
 
@@ -346,11 +353,17 @@ CflatVec256f cflat_scale_v256f(CflatVec256f x, f32 s) {
 #define v256cff cflat_v256cff
 
 #define load_v256cf cflat_load_v256cf
+#define load_unaligned_v256cf cflat_load_unaligned_v256cf
 #define store_v256cf cflat_store_v256cf
+#define store_unaligned_v256cf cflat_store_unaligned_v256cf
 
 #define load_v256f cflat_load_v256f
+#define load_unaligned_v256f cflat_load_unaligned_v256f
 #define store_v256f cflat_store_v256f
+#define store_unaligned_v256f cflat_store_unaligned_v256f
 
+#define broadcast_v256cf cflat_broadcast_v256cf
+#define broadcast_v256cff cflat_broadcast_v256cff
 #define conj_v256cf cflat_conj_v256cf
 #define mul_v256cf cflat_mul_v256cf
 #define add_v256cf cflat_add_v256cf
@@ -362,7 +375,6 @@ CflatVec256f cflat_scale_v256f(CflatVec256f x, f32 s) {
 #define mul_v256f cflat_mul_v256f
 #define add_v256f cflat_add_v256f
 #define sub_v256f cflat_sub_v256f
+#define scale_v256f cflat_scale_v256f
 
 #endif //CFLAT_AVX_NO_ALIAS
-
-#endif //CFLAT_AVX_H

@@ -28,6 +28,12 @@ CFLAT_DEF bool cflat_lib_close(CflatLib lib);
 CFLAT_DEF CflatProcedure* cflat_load_symbol(CflatLib lib, const char *name);
 
 #if defined(CFLAT_IMPLEMENTATION)
+#define CFLAT_OS_IMPLEMENTATION
+#endif
+
+#endif //CFLAT_OS_H
+
+#if defined(CFLAT_OS_IMPLEMENTATION)
 
 #if defined(OS_WINDOWS)
 
@@ -143,7 +149,8 @@ CflatProcedure* cflat_load_symbol(CflatLib lib, const char *name) {
 #endif
 
 
-#endif // CFLAT_IMPLEMENTATION
+#endif // CFLAT_OS_IMPLEMENTATION
+#undef CFLAT_OS_IMPLEMENTATION
 
 #ifndef CFLAT_OS_NO_ALIAS
 #   define lib_open cflat_lib_open
@@ -153,5 +160,3 @@ CflatProcedure* cflat_load_symbol(CflatLib lib, const char *name) {
 #   define Procedure CflatProcedure
 #   define OsHandleIsValid CflatOsHandleIsValid
 #endif // CFLAT_OS_NO_ALIAS
-
-#endif //CFLAT_OS_H

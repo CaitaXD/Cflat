@@ -59,6 +59,12 @@ isize        cflat_dfa_run_cstr  (CflatDfaKmp *dfa, const char *str);
 #define cflat_dfa_kmp_run(DFA, PATTERN)       CFLAT__STRING_OVERLOAD((PATTERN), cflat_dfa_kmp_run)((DFA), (PATTERN))
 
 #if defined(CFLAT_IMPLEMENTATION)
+#define CFLAT_STRING_IMPLEMENTATION
+#endif
+
+#endif //CFLAT_CFLAT_STRING_H
+
+#if defined(CFLAT_STRING_IMPLEMENTATION)
 
 CflatStringView cflat_sv_from_cstr(const char *cstr)  { 
     const usize len = strlen(cstr);
@@ -264,7 +270,8 @@ CflatStringView cflat_sv_printf(CflatArena *a, const char *fmt, ...) {
     return result;
 }
 
-#endif // CFLAT_IMPLEMENTATION
+#endif // CFLAT_STRING_IMPLEMENTATION
+#undef CFLAT_STRING_IMPLEMENTATION
 
 
 #if !defined(CFLAT_STRING_NO_ALIAS)
@@ -284,6 +291,3 @@ CflatStringView cflat_sv_printf(CflatArena *a, const char *fmt, ...) {
 #   define sv_printf cflat_sv_printf
 
 #endif // CFLAT_STRING_NO_ALIAS
-
-
-#endif //CFLAT_CFLAT_STRING_H

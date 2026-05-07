@@ -47,6 +47,12 @@ CFLAT_DEF CflatByteSlice cflat__slice_new_opt(usize element_size, CflatArena *a,
 CFLAT_DEF CflatByteSlice cflat__subslice(usize element_size, const CflatByteSlice *s, isize offset, isize length);
 
 #if defined(CFLAT_IMPLEMENTATION)
+#define CFLAT_SLICE_IMPLEMENTATION
+#endif
+
+#endif //CFLAT_SLICE_H
+
+#if defined(CFLAT_SLICE_IMPLEMENTATION)
 
 CflatByteSlice cflat__subslice(const usize element_size, const CflatByteSlice *s, const isize offset, const isize length) {
     usize u_offset = offset;
@@ -75,7 +81,8 @@ CflatByteSlice cflat__slice_new_opt(usize element_size, CflatArena *a, usize len
     return slice;
 }
 
-#endif // CFLAT_IMPLEMENTATION
+#endif // CFLAT_SLICE_IMPLEMENTATION
+#undef CFLAT_SLICE_IMPLEMENTATION
 
 #ifndef CFLAT_SLICE_NO_ALIAS
 
@@ -89,6 +96,3 @@ CflatByteSlice cflat__slice_new_opt(usize element_size, CflatArena *a, usize len
 #   define slice_at cflat_slice_at
 
 #endif // CFLAT_SLICE_NO_ALIAS
-
-
-#endif //CFLAT_SLICE_H
