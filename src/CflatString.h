@@ -134,29 +134,6 @@ CflatDfaKmp* cflat_dfa_kmp_match_cstr(CflatDfaKmp *dfa, const char *str) {
      return cflat_dfa_kmp_match_sv(dfa, cflat_sv_from_cstr(str));
 }
 
-CflatDfaKmp* cflat_dfa_trimleft_sv(CflatDfaKmp *dfa, CflatStringView set) {
-    for (usize i = 0; i < set.length; ++i) {
-        cflat_dfa_at(dfa, 0, (u8)set.data[i]) = 0;
-    }
-    return dfa;
-}
-
-CflatDfaKmp* cflat_dfa_trimleft_cstr(CflatDfaKmp *dfa, const char *set) {
-    return cflat_dfa_trimleft_sv(dfa, cflat_sv_from_cstr(set));
-}
-
-CflatDfaKmp* cflat_dfa_trimright_sv(CflatDfaKmp *dfa, CflatStringView set) {
-    usize final_state = dfa->rows - 1;
-    for (usize i = 0; i < set.length; ++i) {
-        cflat_dfa_at(dfa, final_state, (u8)set.data[i]) = (u8)final_state;
-    }
-    return dfa;
-}
-
-CflatDfaKmp* cflat_dfa_trimright_cstr(CflatDfaKmp *dfa, const char *set) {
-    return cflat_dfa_trimright_sv(dfa, cflat_sv_from_cstr(set));
-}
-
 isize cflat_dfa_run_sv(CflatDfaKmp *dfa, CflatStringView input) {
     usize index = SIZE_MAX, state = 0;
     for (usize i = 0; i < input.length; ++i) {
@@ -294,10 +271,6 @@ CflatStringView cflat_sv_printf(CflatArena *a, const char *fmt, ...) {
 #   define dfa_match_sv cflat_dfa_match_sv
 #   define dfa_run_cstr cflat_dfa_run_cstr
 #   define dfa_run_sv cflat_dfa_run_sv
-#   define dfa_trimleft_cstr cflat_dfa_trimleft_cstr
-#   define dfa_trimleft_sv cflat_dfa_trimleft_sv
-#   define dfa_trimright_cstr cflat_dfa_trimright_cstr
-#   define dfa_trimright_sv cflat_dfa_trimright_sv
 #   define mem_copy cflat_mem_copy
 #   define path_name_cstr cflat_path_name_cstr
 #   define path_name_sv cflat_path_name_sv

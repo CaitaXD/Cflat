@@ -721,9 +721,6 @@ CflatArena* cflat_arena_memory_mapped(const char *filepath, usize size_hint, Cfl
 
 #   define stackalloc cflat_stackalloc
 #   define mem_copy cflat_mem_copy
-#   define clit cflat_lit
-#   define os_aligned_malloc cflat_os_aligned_malloc
-#   define os_aligned_free cflat_os_aligned_free
 #   define arena_init cflat_arena_init
 #   define arena_new cflat_arena_new
 #   define arena_push cflat_arena_push

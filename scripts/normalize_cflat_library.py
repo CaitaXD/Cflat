@@ -141,17 +141,34 @@ def inject_aliases(text: str, path: Path) -> tuple[str, int, bool]:
         for alias, target in symbols
         if alias not in existing_aliases and target not in existing_targets
     ]
-    if not additions:
+
+    text_before = re.sub(r"(?ms)/\*.*?\*/|//[^\n]*", "", text[: match.start()])
+    text_after = re.sub(r"(?ms)/\*.*?\*/|//[^\n]*", "", text[match.end() :])
+    lines = body.splitlines()
+    kept: list[str] = []
+    removed = 0
+    for line in lines:
+        m = DEFINE_RE.match(line.strip())
+        if m and m.group(2).startswith(("cflat_", "CFLAT_")):
+            target = m.group(2)
+            if not re.search(rf"\b{re.escape(target)}\b", text_before + text_after):
+                removed += 1
+                continue
+        kept.append(line)
+
+    if not additions and removed == 0:
         return text, 0, block_created
 
-    new_body = body.rstrip("\n")
+    new_body = ("\n".join(kept)).rstrip("\n")
     if new_body:
         new_body += "\n"
-    new_body += "\n".join(additions) + "\n"
+    new_body += "\n".join(additions)
+    if additions:
+        new_body += "\n"
 
     replacement = f"{match.group('start')}{new_body}{match.group('end')}"
     updated = text[: match.start()] + replacement + text[match.end() :]
-    return updated, len(additions), block_created
+    return updated, len(additions) + removed, block_created
 
 
 def normalize_header(text: str, path: Path) -> tuple[str, int, int, bool]:
@@ -202,7 +219,7 @@ def main() -> int:
         if block_created:
             created_blocks += 1
         print(
-            f"{path}: +{defs_count} CFLAT_DEF, +{aliases_count} aliases, "
+            f"{path}: +{defs_count} CFLAT_DEF, {'~' if aliases_count else '='}{aliases_count} aliases, "
             f"{'+1 alias block' if block_created else '+0 alias block'}"
         )
 
