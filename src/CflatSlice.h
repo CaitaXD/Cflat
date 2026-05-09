@@ -43,7 +43,7 @@ typedef struct cflat_byte_slice {
 #define cflat_slice_data(SLICE)       (SLICE).data
 #define cflat_slice_at(SLICE, INDEX)  ( (SLICE).data + cflat_bounds_check( (INDEX), (SLICE).length) )
 
-CFLAT_DEF CflatByteSlice cflat__slice_new_opt(usize element_size, CflatArena *a, usize length, CflatSliceNewOpt opt);
+CflatByteSlice cflat__slice_new_opt(usize element_size, CflatArena *a, usize length, CflatSliceNewOpt opt);
 CFLAT_DEF CflatByteSlice cflat__subslice(usize element_size, const CflatByteSlice *s, isize offset, isize length);
 
 #if defined(CFLAT_IMPLEMENTATION)

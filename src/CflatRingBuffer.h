@@ -22,15 +22,13 @@ typedef struct ring_buffer_read_opt {
     bool clear;
 } RingBufferReadOpt;
 
-CflatRingBuffer* cflat_ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt);
-
-usize cflat_ring_buffer_count             (CflatRingBuffer *rb                                                        );
-bool cflat_ring_buffer_is_empty           (CflatRingBuffer *rb                                                        );
-void cflat_ring_buffer_clear              (CflatRingBuffer *rb                                                        );
-bool cflat_ring_buffer_write              (CflatRingBuffer *rb, usize element_size, const void *src                   );
-bool cflat_ring_buffer_read_opt           (CflatRingBuffer *rb, usize element_size, void *dst, RingBufferReadOpt opt  );
-void cflat_ring_buffer_overwrite          (CflatRingBuffer *rb, usize element_size, const void *src                   );
-
+CFLAT_DEF CflatRingBuffer* cflat_ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt);
+CFLAT_DEF usize cflat_ring_buffer_count             (CflatRingBuffer *rb                                                        );
+CFLAT_DEF bool cflat_ring_buffer_is_empty           (CflatRingBuffer *rb                                                        );
+CFLAT_DEF void cflat_ring_buffer_clear              (CflatRingBuffer *rb                                                        );
+CFLAT_DEF bool cflat_ring_buffer_write              (CflatRingBuffer *rb, usize element_size, const void *src                   );
+CFLAT_DEF bool cflat_ring_buffer_read_opt           (CflatRingBuffer *rb, usize element_size, void *dst, RingBufferReadOpt opt  );
+CFLAT_DEF void cflat_ring_buffer_overwrite          (CflatRingBuffer *rb, usize element_size, const void *src                   );
 #define cflat_ring_buffer_read(rb, element_size, dst, ...) ring_buffer_read_opt(rb, element_size, dst, CFLAT_OPT(RingBufferReadOpt, .clear = false, __VA_ARGS__))
 
 #if defined(CFLAT_IMPLEMENTATION)

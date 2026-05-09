@@ -84,6 +84,7 @@
 #   define slice_insert cflat_slice_insert
 #   define slice_append_fixed cflat_slice_append_fixed
 #   define slice_insert_fixed cflat_slice_insert_fixed
+#   define mem_move cflat_mem_move
 #endif // CFLAT_DA_NO_ALIAS
 
 #endif //CFLAT_DA_H

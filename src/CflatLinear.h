@@ -4,8 +4,7 @@
 #include "CflatCore.h"
 #include "CflatMath.h"
 
-c32* cflat_mat_transpose_c32(usize rows, usize cols, c32 (*restrict out)[cols][rows], const c32 (*restrict in)[rows][cols]);
-
+CFLAT_DEF c32* cflat_mat_transpose_c32(usize rows, usize cols, c32 (*restrict out)[cols][rows], const c32 (*restrict in)[rows][cols]);
 #if defined(CFLAT_IMPLEMENTATION)
 #define CFLAT_LINEAR_IMPLEMENTATION
 #endif

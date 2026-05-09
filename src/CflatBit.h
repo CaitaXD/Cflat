@@ -270,3 +270,7 @@ u32 cflat_log2_u32(u32 x) {
 #   define next_pow2 cflat_next_pow2
 #   define prev_pow2 cflat_prev_pow2
 #endif // CFLAT_NO_ALIAS
+#if !defined(CFLAT_BIT_NO_ALIAS)
+#   define log2_u32 cflat_log2_u32
+#   define log2_u64 cflat_log2_u64
+#endif // CFLAT_BIT_NO_ALIAS

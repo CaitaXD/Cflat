@@ -13,13 +13,10 @@
 #include <string.h>
 
 #ifndef CFLAT__SLICE_U32
-
 #define CFLAT__SLICE_U32
-
 typedef struct cflat_slice_u32 {
     CFLAT_SLICE_FIELDS(u32);
 } CflatSliceU32;
-
 #endif //CFLAT__SLICE_U32
 
 #define cflat__nfa_epsilon UINT32_MAX
@@ -57,16 +54,13 @@ cflat_enum(CflatMatchOptions, u8) {
     CFLAT_MATCH_EXACT         = CFLAT_MATCH_BEGIN | CFLAT_MATCH_END,
 };
 
-CflatNfa cflat_nfa_new(CflatArena *arena);
-// Capture Group
-void cflat_nfa_begin_group(CflatNfa *nfa);
-void cflat_nfa_match_opt(CflatNfa *nfa, CflatStringView pattern, CflatPatternOptions opt);
-// (Previous pattern or "") | pattern 
-void cflat_nfa_or_opt(CflatNfa *nfa, CflatStringView pattern, CflatPatternOptions opt);
-void cflat_nfa_end_group_opt(CflatNfa *nfa, CflatPatternOptions opt);
-
-CflatStringView cflat_nfa_matches(CflatNfa nfa, CflatStringView text);
-bool cflat_nfa_match_next(CflatNfa nfa, CflatStringView *match, const CflatStringView text); 
+CFLAT_DEF CflatNfa cflat_nfa_new(CflatArena *arena);
+CFLAT_DEF void cflat_nfa_begin_group(CflatNfa *nfa);
+CFLAT_DEF void cflat_nfa_match_opt(CflatNfa *nfa, CflatStringView pattern, CflatPatternOptions opt); 
+CFLAT_DEF void cflat_nfa_or_opt(CflatNfa *nfa, CflatStringView pattern, CflatPatternOptions opt);
+CFLAT_DEF void cflat_nfa_end_group_opt(CflatNfa *nfa, CflatPatternOptions opt);
+CFLAT_DEF CflatStringView cflat_nfa_matches(CflatNfa nfa, CflatStringView text);
+CFLAT_DEF bool cflat_nfa_match_next(CflatNfa nfa, CflatStringView *match, const CflatStringView text);
 
 #endif //CFLAT_CFLAT_REGEX_H
 
@@ -238,7 +232,6 @@ CflatStringView cflat_nfa_matches(CflatNfa nfa, CflatStringView text) {
         char **curr_starts = cflat_arena_push_array(char*, temp.arena, nfa.states.length);
         char **next_starts = cflat_arena_push_array(char*, temp.arena, nfa.states.length);
         u32 *epsilons      = cflat_arena_push_array(u32,   temp.arena, nfa.states.length);
-        
         u32 last_index = (u32)nfa.states.length - 1;
 
         for (usize start_index = 0; start_index <= text.length; ++start_index) {
@@ -281,7 +274,6 @@ CflatStringView cflat_nfa_matches(CflatNfa nfa, CflatStringView text) {
                 
                 cflat_swap(u8*,    curr_states, next_states);
                 cflat_swap(char**, curr_starts, next_starts);
-
                 if (curr_states[last_index]) {
                     usize curr_len = (i + 1) - start_index;
                     if (result.data == NULL || curr_len >= result.length) {
@@ -323,3 +315,13 @@ bool cflat_nfa_match_next(CflatNfa nfa, CflatStringView *match, const CflatStrin
 }
 
 #endif //CFLAT_IMPLEMENTATION
+
+#if !defined(CFLAT_CFLAT_REGEX_NO_ALIAS)
+#   define nfa_begin_group cflat_nfa_begin_group
+#   define nfa_end_group_opt cflat_nfa_end_group_opt
+#   define nfa_match_next cflat_nfa_match_next
+#   define nfa_match_opt cflat_nfa_match_opt
+#   define nfa_matches cflat_nfa_matches
+#   define nfa_new cflat_nfa_new
+#   define nfa_or_opt cflat_nfa_or_opt
+#endif // CFLAT_CFLAT_REGEX_NO_ALIAS

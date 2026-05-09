@@ -129,7 +129,6 @@ c32 cflat_rotate_c32(c32 a, f32 theta) {
 c32 clfat_slerp_c32(c32 a, c32 b, f32 t) {    
     f32 a_sqmag = cflat_dot_c32(a, a);
     f32 b_sqmag = cflat_dot_c32(b, b);
-
     if (a_sqmag == 0 || b_sqmag == 0) {
         return cflat_lerp_c32(a, b, t);
     }
@@ -164,5 +163,9 @@ f32 cflat_remap_f32(f32 start1, f32 stop1, f32 start2, f32 stop2, float value) {
 #   define sexpdecay_c32 cflat_sexpdecay_c32
 #   define remap_f32 cflat_remap_f32
 #   define clamp_f32 cflat_clamp_f32
-
+#   define dot_c32 cflat_dot_c32
+#   define expdecay_f32 cflat_expdecay_f32
+#   define ilerp_f32 cflat_ilerp_f32
+#   define lerp_c32 cflat_lerp_c32
+#   define lerp_f32 cflat_lerp_f32
 #endif // CFLAT_MATH_NO_ALIAS

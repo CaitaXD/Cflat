@@ -49,12 +49,11 @@ typedef struct cflat_dfa_kmp {
 
 #define cflat_dfa_at(DFA, ROW, COL) (DFA)->transitions[((ROW) * (DFA)->columns + (COL)) * sizeof *(DFA)->transitions]
 
-CflatDfaKmp* cflat_dfa_kmp_new   (CflatArena *a, usize rows, usize columns);
-CflatDfaKmp* cflat_dfa_match_sv  (CflatDfaKmp *dfa, CflatStringView pattern);
+CFLAT_DEF CflatDfaKmp* cflat_dfa_kmp_new   (CflatArena *a, usize rows, usize columns);
+CFLAT_DEF CflatDfaKmp* cflat_dfa_match_sv  (CflatDfaKmp *dfa, CflatStringView pattern);
 CflatDfaKmp* clfat_dfa_match_cstr(CflatDfaKmp *dfa, const char *str);
-isize        cflat_dfa_run_sv    (CflatDfaKmp *dfa, CflatStringView input); 
-isize        cflat_dfa_run_cstr  (CflatDfaKmp *dfa, const char *str); 
-
+CFLAT_DEF isize        cflat_dfa_run_sv    (CflatDfaKmp *dfa, CflatStringView input);
+CFLAT_DEF isize        cflat_dfa_run_cstr  (CflatDfaKmp *dfa, const char *str);
 #define cflat_dfa_kmp_match(DFA, PATTERN)     CFLAT__STRING_OVERLOAD((PATTERN), cflat_dfa_kmp_match)((DFA), (PATTERN))
 #define cflat_dfa_kmp_run(DFA, PATTERN)       CFLAT__STRING_OVERLOAD((PATTERN), cflat_dfa_kmp_run)((DFA), (PATTERN))
 
@@ -109,7 +108,6 @@ CflatDfaKmp* cflat_dfa_kmp_new(CflatArena *a, usize rows, usize columns) {
 
 CflatDfaKmp* cflat_dfa_kmp_match_sv(CflatDfaKmp *dfa, CflatStringView pattern) {
     cflat_assert(dfa->rows >= pattern.length + 1 && "DFA too small");
-
     usize final_state = dfa->rows - 1;
 
     for (usize i = 0; i < dfa->columns; ++i) 
@@ -192,7 +190,6 @@ isize cflat_sv_find_last_index_sv(CflatStringView string, CflatStringView substr
     arena_scratch_scope(scratch, 0) {
         CflatDfaKmp *dfa = cflat_dfa_kmp_new(scratch.arena, substring.length + 1, UCHAR_MAX + 1);
         cflat_dfa_kmp_match(dfa, substring);
-
         usize state = 0; 
         for (usize i = 0; i < string.length; ++i) {
             state = cflat_dfa_at(dfa, state, (u8)string.data[i]);
@@ -205,7 +202,7 @@ isize cflat_sv_find_last_index_sv(CflatStringView string, CflatStringView substr
 }
 
 isize cflat_sv_find_index_cstr(CflatStringView string, const char *substring) {
-     return cflat_sv_find_index_sv(string, cflat_sv_from_cstr(substring)); 
+     return cflat_sv_find_index_sv(string, cflat_sv_from_cstr(substring));
 }
 
 isize cflat_sv_find_last_index_cstr(CflatStringView string, const char *substring) { 
@@ -289,5 +286,27 @@ CflatStringView cflat_sv_printf(CflatArena *a, const char *fmt, ...) {
 #   define String CflatString
 #   define StringView CflatStringView
 #   define sv_printf cflat_sv_printf
-
+#   define dfa_at cflat_dfa_at
+#   define dfa_kmp_match cflat_dfa_kmp_match
+#   define dfa_kmp_match_cstr cflat_dfa_kmp_match_cstr
+#   define dfa_kmp_match_sv cflat_dfa_kmp_match_sv
+#   define dfa_kmp_new cflat_dfa_kmp_new
+#   define dfa_match_sv cflat_dfa_match_sv
+#   define dfa_run_cstr cflat_dfa_run_cstr
+#   define dfa_run_sv cflat_dfa_run_sv
+#   define dfa_trimleft_cstr cflat_dfa_trimleft_cstr
+#   define dfa_trimleft_sv cflat_dfa_trimleft_sv
+#   define dfa_trimright_cstr cflat_dfa_trimright_cstr
+#   define dfa_trimright_sv cflat_dfa_trimright_sv
+#   define mem_copy cflat_mem_copy
+#   define path_name_cstr cflat_path_name_cstr
+#   define path_name_sv cflat_path_name_sv
+#   define sv_clone_cstr cflat_sv_clone_cstr
+#   define sv_clone_sv cflat_sv_clone_sv
+#   define sv_find_index_cstr cflat_sv_find_index_cstr
+#   define sv_find_index_sv cflat_sv_find_index_sv
+#   define sv_find_last_index_cstr cflat_sv_find_last_index_cstr
+#   define sv_find_last_index_sv cflat_sv_find_last_index_sv
+#   define sv_find_substring_cstr cflat_sv_find_substring_cstr
+#   define sv_find_substring_sv cflat_sv_find_substring_sv
 #endif // CFLAT_STRING_NO_ALIAS

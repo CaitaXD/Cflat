@@ -11,9 +11,8 @@
 #include <stdio.h>
 
 
-void cflat_fft_c32(const usize fft_size, c32 *restrict out, const c32 *restrict in);
-void cflat_ifft_c32(const usize fft_size, c32 *restrict out, const c32 *restrict in);
-
+CFLAT_DEF void cflat_fft_c32(const usize fft_size, c32 *restrict out, const c32 *restrict in);
+CFLAT_DEF void cflat_ifft_c32(const usize fft_size, c32 *restrict out, const c32 *restrict in);
 #if defined(CFLAT_IMPLEMENTATION)
 #define CFLAT_FFT_IMPLEMENTATION
 #endif
@@ -113,7 +112,6 @@ static void  cflat__radix8butterfly(const usize stride, c32 *restrict out, const
         0, -1,                            //          0 - i
         -INVSQRT2, -INVSQRT2              // -1/sqrt(2) - i/sqrt(2)
     );
-
     CflatVec256cf ev       = cflat_load_v256cf(out + e);
     CflatVec256cf od       = cflat_mul_v256cf(cflat_load_v256cf(out + o), twiddle);
     cflat_store_v256cf(out + e, cflat_add_v256cf(ev, od));
@@ -255,3 +253,12 @@ void cflat_ifft_c32(const usize fft_size, c32 *restrict out, const c32 *restrict
 
 #endif // CFLAT_FFT_IMPLEMENTATION
 #undef CFLAT_FFT_IMPLEMENTATION
+#if !defined(CFLAT_FFT_NO_ALIAS)
+#   define fft_c32 cflat_fft_c32
+#   define ifft_c32 cflat_ifft_c32
+#   define load_v256cf cflat_load_v256cf
+#   define twiddle_lookup_v256cf cflat_twiddle_lookup_v256cf
+#   define twidle_index cflat_twidle_index
+#   define twidle_lookup_c32 cflat_twidle_lookup_c32
+#   define twidle_precompute cflat_twidle_precompute
+#endif // CFLAT_FFT_NO_ALIAS

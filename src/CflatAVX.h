@@ -145,7 +145,7 @@ c32* cflat_store_v256cf(c32 *dst, CflatVec256cf src) {
     #endif
 }
 
-CFLAT_DEF CflatVec256cf cflat_broadcast_v256cf(c32 x) {
+CflatVec256cf cflat_broadcast_v256cf(c32 x) {
     #if defined(__AVX__)
     f64 f = cflat_bit_cast(f64, c32, x);
     return (CflatVec256cf){ _mm256_castpd_ps(_mm256_set1_pd(f)) };
@@ -154,7 +154,7 @@ CFLAT_DEF CflatVec256cf cflat_broadcast_v256cf(c32 x) {
     #endif
 }
 
-CFLAT_DEF CflatVec256cf cflat_broadcast_v256cff(f32 real, f32 imag) {
+CflatVec256cf cflat_broadcast_v256cff(f32 real, f32 imag) {
     #if defined(__AVX__)
     f64 f = cflat_bit_cast(f64, c32, (c32){ real + imag*I });
     return (CflatVec256cf){ _mm256_castpd_ps(_mm256_set1_pd(f)) }; 
@@ -376,5 +376,5 @@ CflatVec256f cflat_scale_v256f(CflatVec256f x, f32 s) {
 #define add_v256f cflat_add_v256f
 #define sub_v256f cflat_sub_v256f
 #define scale_v256f cflat_scale_v256f
-
+#   define mem_copy cflat_mem_copy
 #endif //CFLAT_AVX_NO_ALIAS

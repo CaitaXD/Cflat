@@ -384,3 +384,6 @@ typedef u8 byte;
 #   define lvalue cflat_lvalue
 #   define lvalue_cast cflat_lvalue_cast
 #endif // CFLAT_NO_ALIAS
+#if !defined(CFLAT_CORE_NO_ALIAS)
+
+#endif // CFLAT_CORE_NO_ALIAS
