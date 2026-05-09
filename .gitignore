@@ -58,5 +58,13 @@ dkms.conf
 # debug information files
 *.dwo
 
+# Generated docs
+/doc/html/
+/doc/man3/
+/doc/json/
+
+# Python bytecode
+__pycache__/
+
 #vs code
 .vscode/

@@ -444,7 +444,7 @@ def extract_struct_fields(body: str) -> list[tuple[str, str]]:
         if not line or not line.endswith(";"):
             continue
         line = line[:-1].strip()
-        line = re.sub(r"\s*\[[^\]]*\]", "", line).strip()
+        line = re.sub(r"\s*\[[^\]]+\]", "", line).strip()
         line = re.sub(r"\s*:\s*\d+", "", line).strip()
         if not line:
             continue
