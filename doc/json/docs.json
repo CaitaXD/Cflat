@@ -1,0 +1,2287 @@
+{
+  "synopsis": "### Cflat is a collection of C data structures and algorithms.\n\n### Conventions:\n\n- All library functions must be prefixed with cflat_\n- Internal functions must be prefixed with cflat__\n- All library functions have an alias without the cflat_ prefix, which can be disabled with by defining CFLAT_XXX_NO_ALIAS to 1\n\n- Types of constructors:\n    - cflat_xxx_alloc:\n        - Allocates memory for an object and returns a pointer to it\n        - Takes in `CflatArena *a` as first argument\n    - cflat_xxx_new:\n        - Allocates memory and initializes the object\n        - Takes in `CflatArena *a` as first argument\n    - cflat_xxx_init:\n        - Initializes memory\n        - Should never allocate memory\n    - cflat_xxx_lit:\n        - Creates an object using a compund literal\n        - Should be able to be used in static initialization\n\n- Types of destructors:\n    - cflat_xxx_delete:\n        - Frees memory\n    - cflat_xxx_clear:\n        - Makes object ready for reuse should never free memory\n\n- Scope macros:\n    - Macros of the form cflat_xxx_scope, will be inplemented as a for loop and must be used with a block scope\n    ```c\n    TempArena temp;\n    // gets a temporary arena\n    cflat_scratch_arena_scope(temp) {\n        ...\n    }\n    // resets the temporary arena\n    ```",
+  "modules": [
+    {
+      "slug": "cflat-avx",
+      "header": "CflatAVX.h",
+      "title": "Cflat AVX module",
+      "synopsis": "",
+      "functions": [
+        {
+          "name": "cflat_add_v256cf",
+          "returnType": "CflatVec256cf",
+          "params": "CflatVec256cf x, CflatVec256cf y",
+          "decl": "CFLAT_DEF CflatVec256cf cflat_add_v256cf(CflatVec256cf x, CflatVec256cf y);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_broadcast_v256cf",
+          "returnType": "CflatVec256cf",
+          "params": "c32 x",
+          "decl": "CFLAT_DEF CflatVec256cf cflat_broadcast_v256cf(c32 x);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_broadcast_v256cff",
+          "returnType": "CflatVec256cf",
+          "params": "f32 real, f32 imag",
+          "decl": "CFLAT_DEF CflatVec256cf cflat_broadcast_v256cff(f32 real, f32 imag);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_conj_v256cf",
+          "returnType": "CflatVec256cf",
+          "params": "CflatVec256cf x",
+          "decl": "CFLAT_DEF CflatVec256cf cflat_conj_v256cf(CflatVec256cf x);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_load_unaligned_v256cf",
+          "returnType": "CflatVec256cf",
+          "params": "const c32 *src",
+          "decl": "CFLAT_DEF CflatVec256cf cflat_load_unaligned_v256cf(const c32 *src);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_load_v256cf",
+          "returnType": "CflatVec256cf",
+          "params": "const c32 *src",
+          "decl": "CFLAT_DEF CflatVec256cf cflat_load_v256cf(const c32 *src);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_mul_v256cf",
+          "returnType": "CflatVec256cf",
+          "params": "CflatVec256cf cx, CflatVec256cf cy",
+          "decl": "CFLAT_DEF CflatVec256cf cflat_mul_v256cf(CflatVec256cf cx, CflatVec256cf cy);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_mul_v256cff",
+          "returnType": "CflatVec256cf",
+          "params": "CflatVec256cf x, CflatVec256f s",
+          "decl": "CFLAT_DEF CflatVec256cf cflat_mul_v256cff(CflatVec256cf x, CflatVec256f s);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_scale_v256cff",
+          "returnType": "CflatVec256cf",
+          "params": "CflatVec256cf x, f32 s",
+          "decl": "CFLAT_DEF CflatVec256cf cflat_scale_v256cff(CflatVec256cf x, f32 s);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sub_v256cf",
+          "returnType": "CflatVec256cf",
+          "params": "CflatVec256cf x, CflatVec256cf y",
+          "decl": "CFLAT_DEF CflatVec256cf cflat_sub_v256cf(CflatVec256cf x, CflatVec256cf y);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_v256cf",
+          "returnType": "CflatVec256cf",
+          "params": "c32 x, c32 y, c32 z, c32 w",
+          "decl": "CFLAT_DEF CflatVec256cf cflat_v256cf(c32 x, c32 y, c32 z, c32 w);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_v256cff",
+          "returnType": "CflatVec256cf",
+          "params": "f32 xr, f32 xi, f32 yr, f32 yi, f32 zr, f32 zi, f32 wr, f32 wi",
+          "decl": "CFLAT_DEF CflatVec256cf cflat_v256cff(f32 xr, f32 xi, f32 yr, f32 yi, f32 zr, f32 zi, f32 wr, f32 wi);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_add_v256f",
+          "returnType": "CflatVec256f",
+          "params": "CflatVec256f x, CflatVec256f y",
+          "decl": "CFLAT_DEF CflatVec256f cflat_add_v256f(CflatVec256f x, CflatVec256f y);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_broadcast_v256f",
+          "returnType": "CflatVec256f",
+          "params": "f32 x",
+          "decl": "CFLAT_DEF CflatVec256f cflat_broadcast_v256f(f32 x);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_load_unaligned_v256f",
+          "returnType": "CflatVec256f",
+          "params": "const f32 *src",
+          "decl": "CFLAT_DEF CflatVec256f cflat_load_unaligned_v256f(const f32 *src);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_load_v256f",
+          "returnType": "CflatVec256f",
+          "params": "const f32 *src",
+          "decl": "CFLAT_DEF CflatVec256f cflat_load_v256f(const f32 *src);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_mul_v256f",
+          "returnType": "CflatVec256f",
+          "params": "CflatVec256f x, CflatVec256f y",
+          "decl": "CFLAT_DEF CflatVec256f cflat_mul_v256f(CflatVec256f x, CflatVec256f y);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_scale_v256f",
+          "returnType": "CflatVec256f",
+          "params": "CflatVec256f x, f32 s",
+          "decl": "CFLAT_DEF CflatVec256f cflat_scale_v256f(CflatVec256f x, f32 s);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sub_v256f",
+          "returnType": "CflatVec256f",
+          "params": "CflatVec256f x, CflatVec256f y",
+          "decl": "CFLAT_DEF CflatVec256f cflat_sub_v256f(CflatVec256f x, CflatVec256f y);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_v256f",
+          "returnType": "CflatVec256f",
+          "params": "f32 x, f32 y, f32 z, f32 w, f32 v, f32 u, f32 t, f32 s",
+          "decl": "CFLAT_DEF CflatVec256f cflat_v256f(f32 x, f32 y, f32 z, f32 w, f32 v, f32 u, f32 t, f32 s);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_store_unaligned_v256cf",
+          "returnType": "c32*",
+          "params": "c32 *dst, CflatVec256cf src",
+          "decl": "CFLAT_DEF c32* cflat_store_unaligned_v256cf(c32 *dst, CflatVec256cf src);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_store_v256cf",
+          "returnType": "c32*",
+          "params": "c32 *dst, CflatVec256cf src",
+          "decl": "CFLAT_DEF c32* cflat_store_v256cf(c32 *dst, CflatVec256cf src);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_store_unaligned_v256f",
+          "returnType": "f32*",
+          "params": "f32 *dst, CflatVec256f src",
+          "decl": "CFLAT_DEF f32* cflat_store_unaligned_v256f(f32 *dst, CflatVec256f src);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_store_v256f",
+          "returnType": "f32*",
+          "params": "f32 *dst, CflatVec256f src",
+          "decl": "CFLAT_DEF f32* cflat_store_v256f(f32 *dst, CflatVec256f src);",
+          "doc": {}
+        }
+      ],
+      "types": [
+        {
+          "name": "CflatVec256cf",
+          "doc": {},
+          "fields": [
+            {
+              "type": "cflat_alignas(32) __m256",
+              "name": "v"
+            },
+            {
+              "type": "cflat_alignas(32) c32",
+              "name": "v"
+            }
+          ]
+        },
+        {
+          "name": "CflatVec256d",
+          "doc": {},
+          "fields": [
+            {
+              "type": "cflat_alignas(32) __m256d",
+              "name": "v"
+            },
+            {
+              "type": "cflat_alignas(32) f64",
+              "name": "v"
+            }
+          ]
+        },
+        {
+          "name": "CflatVec256f",
+          "doc": {},
+          "fields": [
+            {
+              "type": "cflat_alignas(32) __m256",
+              "name": "v"
+            },
+            {
+              "type": "cflat_alignas(32) f32",
+              "name": "v"
+            }
+          ]
+        },
+        {
+          "name": "CflatVec256i",
+          "doc": {},
+          "fields": [
+            {
+              "type": "cflat_alignas(32) __m256i",
+              "name": "v"
+            },
+            {
+              "type": "cflat_alignas(32) i32",
+              "name": "v"
+            }
+          ]
+        }
+      ],
+      "enums": [],
+      "macros": [
+        {
+          "signature": "cflat_for_vec(TVec, OFFSET, LEN)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_vec_length(TVec)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        }
+      ],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-append",
+      "header": "CflatAppend.h",
+      "title": "Cflat Append module",
+      "synopsis": "",
+      "functions": [],
+      "types": [],
+      "enums": [],
+      "macros": [
+        {
+          "signature": "cflat_slice_append(ARENA, DA, VAL)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_append_fixed(DA, VAL)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_emplace(ARENA, DA, ...)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_emplace_fixed(ARENA, DA, ...)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_insert(ARENA, SLICE, INDEX, VAL)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_insert_fixed(SLICE, INDEX, VAL)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_remove(SLICE, INDEX)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_remove_unordered(DA, INDEX)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_resize(ARENA, DA, HINT)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        }
+      ],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-arena",
+      "header": "CflatArena.h",
+      "title": "Cflat Arena module",
+      "synopsis": "",
+      "functions": [
+        {
+          "name": "cflat_arena_init",
+          "returnType": "CflatArena*",
+          "params": "void *mem, usize size",
+          "decl": "CFLAT_DEF CflatArena* cflat_arena_init (void *mem, usize size );",
+          "doc": {
+            "description": "Initializes a new arena in a preallocated region of memory",
+            "params": {
+              "mem": "pointer to the memory region",
+              "size": "size of the memory region"
+            },
+            "returns": "",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          }
+        },
+        {
+          "name": "cflat_arena_memory_mapped",
+          "returnType": "CflatArena*",
+          "params": "const char *filepath, usize size_hint, CflatPermission mode",
+          "decl": "CFLAT_DEF CflatArena* cflat_arena_memory_mapped (const char *filepath, usize size_hint, CflatPermission mode );",
+          "doc": {
+            "description": "Allocates a new arena in a memory mapped file",
+            "params": {
+              "filepath": "path to the file, relative or absolute",
+              "size_hint": "minimum size in bytes to allocate for the memory mapped region",
+              "mode": "permissions of the memory mapped region"
+            },
+            "returns": "",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          }
+        },
+        {
+          "name": "cflat_arena_new_opt",
+          "returnType": "CflatArena*",
+          "params": "CflatArenaNewOpt opt",
+          "decl": "CFLAT_DEF CflatArena* cflat_arena_new_opt (CflatArenaNewOpt opt );",
+          "doc": {
+            "description": "Allocates a new arena using os specific memory allocation",
+            "params": {
+              "opt": "@inherit(CflatArenaNewOpt)"
+            },
+            "returns": "",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          }
+        },
+        {
+          "name": "cflat_arena_temp_begin",
+          "returnType": "CflatTempArena",
+          "params": "CflatArena *arena",
+          "decl": "CFLAT_DEF CflatTempArena cflat_arena_temp_begin (CflatArena *arena );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_get_scratch_arena_opt",
+          "returnType": "CflatTempArena",
+          "params": "CflatScratchArenaScopeOpt opt",
+          "decl": "CFLAT_DEF CflatTempArena cflat_get_scratch_arena_opt (CflatScratchArenaScopeOpt opt );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_arena_try_push_opt",
+          "returnType": "bool",
+          "params": "CflatArena *arena, usize size, void **mem, CflatAllocOpt opt",
+          "decl": "CFLAT_DEF bool cflat_arena_try_push_opt (CflatArena *arena, usize size, void **mem, CflatAllocOpt opt );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_arena_clear",
+          "returnType": "void",
+          "params": "CflatArena *arena",
+          "decl": "CFLAT_DEF void cflat_arena_clear (CflatArena *arena );",
+          "doc": {
+            "description": "Clears the arena, making it possible to reuse the memory",
+            "params": {
+              "arena": "the arena"
+            },
+            "returns": "",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          }
+        },
+        {
+          "name": "cflat_arena_delete",
+          "returnType": "void",
+          "params": "CflatArena *arena",
+          "decl": "CFLAT_DEF void cflat_arena_delete (CflatArena *arena );",
+          "doc": {
+            "description": "Destroys the arena\nFor each node on the arena\n    Frees  memory - if the node was allocated\n    Unmaps memory - if the node was memory mapped\n    Nothing       - if the node was preallocated",
+            "params": {
+              "arena": "the arena"
+            },
+            "returns": "",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          }
+        },
+        {
+          "name": "cflat_arena_pop",
+          "returnType": "void",
+          "params": "CflatArena *arena, usize size",
+          "decl": "CFLAT_DEF void cflat_arena_pop (CflatArena *arena, usize size );",
+          "doc": {
+            "description": "Deallocates size bytes of memory from the arena",
+            "params": {
+              "arena": "the arena",
+              "size": "size in bytes to deallocate"
+            },
+            "returns": "",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          }
+        },
+        {
+          "name": "cflat_arena_set_pos",
+          "returnType": "void",
+          "params": "CflatArena *arena, usize pos",
+          "decl": "CFLAT_DEF void cflat_arena_set_pos (CflatArena *arena, usize pos );",
+          "doc": {
+            "description": "Sets the arena position to the requested point\nAllocates more memory if position is greater than the whats currently in the arena",
+            "params": {
+              "arena": "the arena",
+              "pos": "the position"
+            },
+            "returns": "",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          }
+        },
+        {
+          "name": "cflat_arena_temp_end",
+          "returnType": "void",
+          "params": "CflatTempArena temp_arena",
+          "decl": "CFLAT_DEF void cflat_arena_temp_end (CflatTempArena temp_arena );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_drop_scratch_arena",
+          "returnType": "void",
+          "params": "const CflatTempArena temp_arena",
+          "decl": "CFLAT_DEF void cflat_drop_scratch_arena (const CflatTempArena temp_arena );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_arena_extend_opt",
+          "returnType": "void*",
+          "params": "CflatArena *arena, void *ptr, usize oldsize, usize newsize, CflatAllocOpt opt",
+          "decl": "CFLAT_DEF void* cflat_arena_extend_opt (CflatArena *arena, void *ptr, usize oldsize, usize newsize, CflatAllocOpt opt);",
+          "doc": {
+            "description": "Takes a region of memory inside the arena and returns a bigger one containing the same information\nThe region can be the same if theres enough space in the arena but that is not a garantee",
+            "params": {
+              "arena": "the arena",
+              "ptr": "the old region of memory",
+              "oldsize": "the size of the old region of memory",
+              "newsize": "the size of the new region of memory",
+              "opt": "@inherit(CflatAllocOpt)"
+            },
+            "returns": "the new region of memory of size newsize",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          }
+        },
+        {
+          "name": "cflat_arena_push_opt",
+          "returnType": "void*",
+          "params": "CflatArena *arena, usize size, CflatAllocOpt opt",
+          "decl": "CFLAT_DEF void* cflat_arena_push_opt (CflatArena *arena, usize size, CflatAllocOpt opt );",
+          "doc": {
+            "description": "Allocates size bytes of memory from the arena",
+            "params": {
+              "arena": "the arena",
+              "size": "size in bytes to allocate",
+              "opt": "@inherit(CflatAllocOpt)"
+            },
+            "returns": "",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          }
+        },
+        {
+          "name": "cflat_arena_top",
+          "returnType": "void*",
+          "params": "CflatArena *arena",
+          "decl": "CFLAT_DEF void* cflat_arena_top (CflatArena *arena );",
+          "doc": {
+            "description": "Returns a pointer the end of the arena\nThe pointer is outside the adress range of the arena",
+            "params": {
+              "arena": "the arena"
+            },
+            "returns": "",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          }
+        }
+      ],
+      "types": [
+        {
+          "name": "CflatAllocOpt",
+          "doc": {
+            "description": "",
+            "params": {
+              "align": "memory alignment of the pointer allocated",
+              "clear": "weather or not the allocated memory should be zeroed"
+            },
+            "returns": "",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          },
+          "fields": [
+            {
+              "type": "usize",
+              "name": "align"
+            },
+            {
+              "type": "bool",
+              "name": "clear"
+            }
+          ]
+        },
+        {
+          "name": "CflatArena",
+          "doc": {},
+          "fields": [
+            {
+              "type": "struct cflat_arena_node *",
+              "name": "curr"
+            },
+            {
+              "type": "struct cflat_arena_node *",
+              "name": "free"
+            },
+            {
+              "type": "CflatArenaFlags",
+              "name": "flags"
+            },
+            {
+              "type": "usize",
+              "name": "pos"
+            }
+          ]
+        },
+        {
+          "name": "CflatArenaNewOpt",
+          "doc": {
+            "description": "",
+            "params": {
+              "reserve": "how much memory should reserved but not yet commited",
+              "commit": "how much memory should be commited",
+              "fixed_size": "weather or not the arena can gorw by allocate new arena nodes"
+            },
+            "returns": "",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          },
+          "fields": [
+            {
+              "type": "usize",
+              "name": "reserve"
+            },
+            {
+              "type": "usize",
+              "name": "commit"
+            },
+            {
+              "type": "bool",
+              "name": "fixed_size"
+            }
+          ]
+        },
+        {
+          "name": "CflatArenaNode",
+          "doc": {},
+          "fields": [
+            {
+              "type": "CflatArena",
+              "name": "_arena"
+            },
+            {
+              "type": "struct cflat_arena_node *",
+              "name": "prev"
+            },
+            {
+              "type": "usize",
+              "name": "pos"
+            },
+            {
+              "type": "usize",
+              "name": "res"
+            },
+            {
+              "type": "usize",
+              "name": "cmt"
+            },
+            {
+              "type": "byte",
+              "name": "data"
+            }
+          ]
+        },
+        {
+          "name": "CflatScratchArenaScopeOpt",
+          "doc": {
+            "description": "",
+            "params": {
+              "conflicts_count": "number of conflicting arenas",
+              "conflicts": "array of arenas that should be filtered out"
+            },
+            "returns": "",
+            "preconditions": [],
+            "postconditions": [],
+            "invariants": []
+          },
+          "fields": [
+            {
+              "type": "usize",
+              "name": "conflicts_count"
+            },
+            {
+              "type": "CflatArena **",
+              "name": "conflicts"
+            }
+          ]
+        },
+        {
+          "name": "CflatTempArena",
+          "doc": {},
+          "fields": [
+            {
+              "type": "CflatArena *",
+              "name": "arena"
+            },
+            {
+              "type": "usize",
+              "name": "pos"
+            }
+          ]
+        }
+      ],
+      "enums": [
+        {
+          "name": "CflatArenaFlags",
+          "baseType": "u64",
+          "doc": "",
+          "members": [
+            {
+              "name": "CFLAT_ARENA_OWNS_MEMORY",
+              "value": "1 << 0"
+            },
+            {
+              "name": "CFLAT_ARENA_FIXED_SIZE",
+              "value": "1 << 1"
+            },
+            {
+              "name": "CFLAT_MEMORY_MAPPED",
+              "value": "1 << 2"
+            }
+          ]
+        },
+        {
+          "name": "CflatPermission",
+          "baseType": "u8",
+          "doc": "",
+          "members": [
+            {
+              "name": "CFLAT_PERMISSION_READ",
+              "value": "1 << 0"
+            },
+            {
+              "name": "CFLAT_PERMISSION_WRITE",
+              "value": "1 << 1"
+            },
+            {
+              "name": "CFLAT_PERMISSION_EXECUTE",
+              "value": "1 << 2"
+            }
+          ]
+        }
+      ],
+      "macros": [
+        {
+          "signature": "CFLAT_ARRAY_SPLAT(ARRAY)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "CFLAT_DEFAULT_COMMIT_SIZE",
+          "value": "KiB(4)",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "CFLAT_DEFAULT_RESERVE_SIZE",
+          "value": "KiB(64)",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_clear_flag(FLAGS, FLAG)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_has_flag(FLAGS, FLAG)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_set_flag(FLAGS, FLAG)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_stackalloc(SIZE)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        }
+      ],
+      "opts": [
+        {
+          "name": "cflat_arena_extend",
+          "returnType": "void*",
+          "params": "CflatArena *arena, void *ptr, usize oldsize, usize newsize, usize align=cflat_alignof(uptr), bool clear=false",
+          "nested": [
+            "Caller:",
+            "  cflat_arena_extend(arena, ptr, oldsize, newsize, .align=align, .clear=clear)",
+            "  cflat_arena_extend(arena, ptr, oldsize, newsize)",
+            "",
+            "Function:",
+            "  void* cflat_arena_extend_opt (CflatArena *arena, void *ptr, usize oldsize, usize newsize, CflatAllocOpt opt)"
+          ]
+        },
+        {
+          "name": "cflat_arena_new",
+          "returnType": "CflatArena*",
+          "params": "usize reserve=CFLAT_DEFAULT_RESERVE_SIZE, usize commit=CFLAT_DEFAULT_COMMIT_SIZE, bool fixed_size=false",
+          "nested": [
+            "Caller:",
+            "  cflat_arena_new(.reserve=reserve, .commit=commit, .fixed_size=fixed_size)",
+            "  cflat_arena_new()",
+            "",
+            "Function:",
+            "  CflatArena* cflat_arena_new_opt (CflatArenaNewOpt opt)"
+          ]
+        },
+        {
+          "name": "cflat_arena_push",
+          "returnType": "void*",
+          "params": "CflatArena *arena, usize size, usize align=cflat_alignof(uptr), bool clear=false",
+          "nested": [
+            "Caller:",
+            "  cflat_arena_push(arena, size, .align=align, .clear=clear)",
+            "  cflat_arena_push(arena, size)",
+            "",
+            "Function:",
+            "  void* cflat_arena_push_opt (CflatArena *arena, usize size, CflatAllocOpt opt)"
+          ]
+        },
+        {
+          "name": "cflat_arena_push_array",
+          "returnType": "void*",
+          "params": "Type(T), CflatArena *arena, usize n, usize align=cflat_alignof(T), bool clear=false",
+          "nested": [
+            "Caller:",
+            "  cflat_arena_push_array(T, arena, n, .align=align, .clear=clear)",
+            "  cflat_arena_push_array(T, arena, n)",
+            "",
+            "Function:",
+            "  void* cflat_arena_push_opt (CflatArena *arena, usize size, CflatAllocOpt opt)"
+          ]
+        },
+        {
+          "name": "cflat_arena_push_ptr",
+          "returnType": "void*",
+          "params": "CflatArena *arena, usize align=cflat_alignof(uptr), bool clear=false",
+          "nested": [
+            "Caller:",
+            "  cflat_arena_push_ptr(arena, .align=align, .clear=clear)",
+            "  cflat_arena_push_ptr(arena)",
+            "",
+            "Function:",
+            "  void* cflat_arena_push_opt (CflatArena *arena, usize size, CflatAllocOpt opt)"
+          ]
+        },
+        {
+          "name": "cflat_arena_push_struct",
+          "returnType": "void*",
+          "params": "Type(T), CflatArena *arena, usize align=cflat_alignof(T), bool clear=false",
+          "nested": [
+            "Caller:",
+            "  cflat_arena_push_struct(T, arena, .align=align, .clear=clear)",
+            "  cflat_arena_push_struct(T, arena)",
+            "",
+            "Function:",
+            "  void* cflat_arena_push_opt (CflatArena *arena, usize size, CflatAllocOpt opt)"
+          ]
+        },
+        {
+          "name": "cflat_arena_try_push",
+          "returnType": "bool",
+          "params": "CflatArena *arena, usize size, void **mem, usize align=cflat_alignof(uptr), bool clear=false",
+          "nested": [
+            "Caller:",
+            "  cflat_arena_try_push(arena, size, mem, .align=align, .clear=clear)",
+            "  cflat_arena_try_push(arena, size, mem)",
+            "",
+            "Function:",
+            "  bool cflat_arena_try_push_opt (CflatArena *arena, usize size, void **mem, CflatAllocOpt opt)"
+          ]
+        },
+        {
+          "name": "cflat_get_scratch_arena",
+          "returnType": "CflatTempArena",
+          "params": "usize conflicts_count=0",
+          "nested": [
+            "Caller:",
+            "  cflat_get_scratch_arena(.conflicts_count=conflicts_count)",
+            "  cflat_get_scratch_arena()",
+            "",
+            "Function:",
+            "  CflatTempArena cflat_get_scratch_arena_opt (CflatScratchArenaScopeOpt opt)"
+          ]
+        }
+      ],
+      "scopes": [
+        {
+          "name": "cflat_scratch_arena_scope(tmp, usize conflicts_count=0)",
+          "returnType": null,
+          "params": null,
+          "nested": [
+            "Caller:",
+            "  cflat_scratch_arena_scope(tmp, .conflicts_count=conflicts_count) {",
+            "    ...",
+            "  }",
+            "  cflat_scratch_arena_scope(tmp) {",
+            "    ...",
+            "  }",
+            "",
+            "Function:",
+            "  CflatTempArena cflat_get_scratch_arena_opt (CflatScratchArenaScopeOpt opt)",
+            "  void cflat_drop_scratch_arena (const CflatTempArena temp_arena)"
+          ]
+        },
+        {
+          "name": "cflat_temp_arena_scope(arena)",
+          "returnType": null,
+          "params": null,
+          "nested": [
+            "Caller:",
+            "  cflat_temp_arena_scope(arena) {",
+            "    ...",
+            "  }",
+            "",
+            "Function:",
+            "  CflatTempArena cflat_arena_temp_begin (CflatArena *arena)",
+            "  void cflat_arena_temp_end (CflatTempArena temp_arena)"
+          ]
+        }
+      ],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-async-queue",
+      "header": "CflatAsyncQueue.h",
+      "title": "Cflat AsyncQueue module",
+      "synopsis": "",
+      "functions": [
+        {
+          "name": "cflat_async_enqueue",
+          "returnType": "CflatAsyncHandle",
+          "params": "CflatAsyncQueue *sched, CflatAsyncQueueTask *task, void *userdata",
+          "decl": "CFLAT_DEF CflatAsyncHandle cflat_async_enqueue(CflatAsyncQueue *sched, CflatAsyncQueueTask *task, void *userdata);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_async_queue_new",
+          "returnType": "CflatAsyncQueue*",
+          "params": "CflatArena *a, usize max_tasks, usize thread_count",
+          "decl": "CFLAT_DEF CflatAsyncQueue* cflat_async_queue_new(CflatArena *a, usize max_tasks, usize thread_count);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_async_handle_is_completed",
+          "returnType": "bool",
+          "params": "CflatAsyncQueue *sched, CflatAsyncHandle handle",
+          "decl": "CFLAT_DEF bool cflat_async_handle_is_completed (CflatAsyncQueue *sched, CflatAsyncHandle handle);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_async_queue_is_completed",
+          "returnType": "bool",
+          "params": "CflatAsyncQueue *sched",
+          "decl": "CFLAT_DEF bool cflat_async_queue_is_completed (CflatAsyncQueue *sched);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sem_timedwait",
+          "returnType": "bool",
+          "params": "CflatSemaphore *sem, struct timespec relative",
+          "decl": "CFLAT_DEF bool cflat_sem_timedwait(CflatSemaphore *sem, struct timespec relative);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sem_trywait",
+          "returnType": "bool",
+          "params": "CflatSemaphore *sem",
+          "decl": "CFLAT_DEF bool cflat_sem_trywait (CflatSemaphore *sem);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_async_queue_result",
+          "returnType": "void *",
+          "params": "CflatAsyncQueue *sched, CflatAsyncHandle handle",
+          "decl": "CFLAT_DEF void *cflat_async_queue_result (CflatAsyncQueue *sched, CflatAsyncHandle handle);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_async_queue_clear",
+          "returnType": "void",
+          "params": "CflatAsyncQueue *sched",
+          "decl": "CFLAT_DEF void cflat_async_queue_clear(CflatAsyncQueue *sched);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_async_queue_join",
+          "returnType": "void",
+          "params": "CflatAsyncQueue *sched",
+          "decl": "CFLAT_DEF void cflat_async_queue_join (CflatAsyncQueue *sched);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sem_delete",
+          "returnType": "void",
+          "params": "CflatSemaphore *sem",
+          "decl": "CFLAT_DEF void cflat_sem_delete (CflatSemaphore *sem);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sem_init",
+          "returnType": "void",
+          "params": "CflatSemaphore *sem, usize initial_count",
+          "decl": "CFLAT_DEF void cflat_sem_init (CflatSemaphore *sem, usize initial_count);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sem_post",
+          "returnType": "void",
+          "params": "CflatSemaphore *sem, usize post",
+          "decl": "CFLAT_DEF void cflat_sem_post (CflatSemaphore *sem, usize post);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sem_wait",
+          "returnType": "void",
+          "params": "CflatSemaphore *sem",
+          "decl": "CFLAT_DEF void cflat_sem_wait (CflatSemaphore *sem);",
+          "doc": {}
+        }
+      ],
+      "types": [
+        {
+          "name": "CflatAsyncHandle",
+          "doc": {},
+          "fields": [
+            {
+              "type": "usize",
+              "name": "index"
+            }
+          ]
+        },
+        {
+          "name": "CflatAsyncHandleSlice",
+          "doc": {},
+          "fields": [
+            {
+              "type": "usize",
+              "name": "capacity"
+            },
+            {
+              "type": "usize",
+              "name": "length"
+            },
+            {
+              "type": "CflatAsyncHandle *",
+              "name": "data"
+            }
+          ]
+        },
+        {
+          "name": "CflatAsyncQueue",
+          "doc": {},
+          "fields": [
+            {
+              "type": "_Atomic usize",
+              "name": "head"
+            },
+            {
+              "type": "_Atomic usize",
+              "name": "tail"
+            },
+            {
+              "type": "usize",
+              "name": "task_count"
+            },
+            {
+              "type": "usize",
+              "name": "thread_count"
+            },
+            {
+              "type": "CflatWorkItem *",
+              "name": "bag"
+            },
+            {
+              "type": "pthread_t *",
+              "name": "pool"
+            },
+            {
+              "type": "CflatSemaphore",
+              "name": "sem_avaliable"
+            },
+            {
+              "type": "atomic_bool",
+              "name": "running"
+            }
+          ]
+        },
+        {
+          "name": "CflatSemaphore",
+          "doc": {},
+          "fields": [
+            {
+              "type": "pthread_mutex_t",
+              "name": "mutex"
+            },
+            {
+              "type": "pthread_cond_t",
+              "name": "cond"
+            },
+            {
+              "type": "usize",
+              "name": "counter"
+            }
+          ]
+        },
+        {
+          "name": "CflatWorkItem",
+          "doc": {},
+          "fields": [
+            {
+              "type": "CflatAsyncQueueTask *",
+              "name": "task"
+            },
+            {
+              "type": "void *",
+              "name": "userdata"
+            },
+            {
+              "type": "void *",
+              "name": "result"
+            },
+            {
+              "type": "atomic_bool",
+              "name": "ready"
+            },
+            {
+              "type": "atomic_bool",
+              "name": "completed"
+            }
+          ]
+        }
+      ],
+      "enums": [],
+      "macros": [
+        {
+          "signature": "cflat_async_handle_is_nil(HANDLE)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_async_handle_nil()",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        }
+      ],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-bit",
+      "header": "CflatBit.h",
+      "title": "Cflat Bit module",
+      "synopsis": "",
+      "functions": [],
+      "types": [],
+      "enums": [],
+      "macros": [
+        {
+          "signature": "cflat_align_pow2(x,b)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_is_pow2(x)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_next_pow2(x)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_prev_pow2(x)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        }
+      ],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-core",
+      "header": "CflatCore.h",
+      "title": "Cflat Core module",
+      "synopsis": "",
+      "functions": [],
+      "types": [],
+      "enums": [],
+      "macros": [
+        {
+          "signature": "CFLAT_ARRAY_SIZE(XS)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "CFLAT_COL_SIZE(XS)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "CFLAT_DEF",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "CFLAT_OPT(CLITERAL, ...)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "CFLAT_ROW_SIZE(XS)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_alignas",
+          "value": "_Alignas",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_alignof",
+          "value": "__alignof__",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_alignof_member(T, member)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_alignofexp(EXP)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_assert",
+          "value": "assert",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_assert(e)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_assert_has_member(p, member)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_assert_ptr_has_member(p, member)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_assert_type_member(T, member)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_bit_cast(TFrom, TTo, VAL)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_bounds_check(index, len)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_defer(begin, end)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_defer_exit",
+          "value": "continue",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_define_padded_struct(type, size)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_enum(ENUM_NAME, ENUM_TYPE)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_export",
+          "value": "__attribute__((visibility(\"default\")))",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_force_inline",
+          "value": "inline",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_likely(x)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_ll_pop(top,link)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_ll_push(top,node,link)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_lvalue(TYPE, LITERAL)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_lvalue_cast(TFROM, TTO)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_max(A,B)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_may_alias",
+          "value": "__attribute__((__may_alias__))",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_mem_copy",
+          "value": "memcpy",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_mem_move",
+          "value": "memmove",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_mem_zero(MEM, LEN)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_min(A,B)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_not_implemented",
+          "value": "cflat_assert(!\"Not Implemented!\")",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_padded_struct(type, size, ...)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_pause",
+          "value": "_mm_pause",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_sizeof_member(T, member)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_static_assert(e)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_swap(T, a, b)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_thread_local",
+          "value": "_Thread_local",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_trap()",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_typeof",
+          "value": "__typeof__",
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_typeof_member(T, member)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_unlikely(x)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_unreachable",
+          "value": "cflat_assert(!\"Unreachable!\")",
+          "wrapper": null,
+          "doc": ""
+        }
+      ],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-fft",
+      "header": "CflatFft.h",
+      "title": "Cflat Fft module",
+      "synopsis": "",
+      "functions": [
+        {
+          "name": "cflat_fft_c32",
+          "returnType": "void",
+          "params": "const usize fft_size, c32 *restrict out, const c32 *restrict in",
+          "decl": "CFLAT_DEF void cflat_fft_c32(const usize fft_size, c32 *restrict out, const c32 *restrict in);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_ifft_c32",
+          "returnType": "void",
+          "params": "const usize fft_size, c32 *restrict out, const c32 *restrict in",
+          "decl": "CFLAT_DEF void cflat_ifft_c32(const usize fft_size, c32 *restrict out, const c32 *restrict in);",
+          "doc": {}
+        }
+      ],
+      "types": [],
+      "enums": [],
+      "macros": [],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-lib",
+      "header": "CflatLib.h",
+      "title": "Cflat Lib module",
+      "synopsis": "",
+      "functions": [
+        {
+          "name": "cflat_lib_open",
+          "returnType": "CflatLib",
+          "params": "const char *path",
+          "decl": "CFLAT_DEF CflatLib cflat_lib_open(const char *path);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_load_symbol",
+          "returnType": "CflatProcedure*",
+          "params": "CflatLib lib, const char *name",
+          "decl": "CFLAT_DEF CflatProcedure* cflat_load_symbol(CflatLib lib, const char *name);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_lib_close",
+          "returnType": "bool",
+          "params": "CflatLib lib",
+          "decl": "CFLAT_DEF bool cflat_lib_close(CflatLib lib);",
+          "doc": {}
+        }
+      ],
+      "types": [
+        {
+          "name": "CflatLib",
+          "doc": {},
+          "fields": [
+            {
+              "type": "CflatOsHandle",
+              "name": "handle"
+            },
+            {
+              "type": "CflatOsHandle",
+              "name": "h_dll"
+            },
+            {
+              "type": "CflatOsHandle",
+              "name": "h_pdb"
+            },
+            {
+              "type": "char",
+              "name": "temp_dll"
+            },
+            {
+              "type": "char",
+              "name": "temp_pdb"
+            }
+          ]
+        },
+        {
+          "name": "CflatOsHandle",
+          "doc": {},
+          "fields": []
+        }
+      ],
+      "enums": [],
+      "macros": [],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-linear",
+      "header": "CflatLinear.h",
+      "title": "Cflat Linear module",
+      "synopsis": "",
+      "functions": [
+        {
+          "name": "cflat_mat_transpose_c32",
+          "returnType": "c32*",
+          "params": "usize rows, usize cols, c32 (*restrict out)[cols][rows], const c32 (*restrict in)[rows][cols]",
+          "decl": "CFLAT_DEF c32* cflat_mat_transpose_c32(usize rows, usize cols, c32 (*restrict out)[cols][rows], const c32 (*restrict in)[rows][cols]);",
+          "doc": {}
+        }
+      ],
+      "types": [],
+      "enums": [],
+      "macros": [],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-math",
+      "header": "CflatMath.h",
+      "title": "Cflat Math module",
+      "synopsis": "",
+      "functions": [
+        {
+          "name": "cflat_lerp_c32",
+          "returnType": "c32",
+          "params": "c32 a, c32 b, f32 t",
+          "decl": "CFLAT_DEF c32 cflat_lerp_c32(c32 a, c32 b, f32 t);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_rotate_c32",
+          "returnType": "c32",
+          "params": "c32 a, f32 theta",
+          "decl": "CFLAT_DEF c32 cflat_rotate_c32(c32 a, f32 theta);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sexpdecay_c32",
+          "returnType": "c32",
+          "params": "c32 a, c32 b, f32 decay, f32 dt",
+          "decl": "CFLAT_DEF c32 cflat_sexpdecay_c32(c32 a, c32 b, f32 decay, f32 dt);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_clamp_f32",
+          "returnType": "f32",
+          "params": "f32 x, f32 min, f32 max",
+          "decl": "CFLAT_DEF f32 cflat_clamp_f32(f32 x, f32 min, f32 max);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_dot_c32",
+          "returnType": "f32",
+          "params": "c32 a, c32 b",
+          "decl": "CFLAT_DEF f32 cflat_dot_c32(c32 a, c32 b);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_expdecay_f32",
+          "returnType": "f32",
+          "params": "f32 a, f32 b, f32 decay, f32 dt",
+          "decl": "CFLAT_DEF f32 cflat_expdecay_f32(f32 a, f32 b, f32 decay, f32 dt);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_ilerp_f32",
+          "returnType": "f32",
+          "params": "f32 a, f32 b, f32 t",
+          "decl": "CFLAT_DEF f32 cflat_ilerp_f32(f32 a, f32 b, f32 t);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_lerp_f32",
+          "returnType": "f32",
+          "params": "f32 a, f32 b, f32 t",
+          "decl": "CFLAT_DEF f32 cflat_lerp_f32(f32 a, f32 b, f32 t);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_remap_f32",
+          "returnType": "f32",
+          "params": "f32 start1, f32 stop1, f32 start2, f32 stop2, float value",
+          "decl": "CFLAT_DEF f32 cflat_remap_f32(f32 start1, f32 stop1, f32 start2, f32 stop2, float value);",
+          "doc": {}
+        }
+      ],
+      "types": [],
+      "enums": [],
+      "macros": [
+        {
+          "signature": "cflat_abs(A)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_ilerp(A,B,T)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_lerp(A,B,T)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_log_base(base, x)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_pi (3.14159265358979323846264338327950288419716939937510582097494459230781640628620899)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        }
+      ],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-regex",
+      "header": "CflatRegex.h",
+      "title": "Cflat Regex module",
+      "synopsis": "",
+      "functions": [
+        {
+          "name": "cflat_nfa_new",
+          "returnType": "CflatNfa",
+          "params": "CflatArena *arena",
+          "decl": "CFLAT_DEF CflatNfa cflat_nfa_new(CflatArena *arena);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_nfa_matches",
+          "returnType": "CflatStringView",
+          "params": "CflatNfa nfa, CflatStringView text",
+          "decl": "CFLAT_DEF CflatStringView cflat_nfa_matches(CflatNfa nfa, CflatStringView text);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_nfa_match_next",
+          "returnType": "bool",
+          "params": "CflatNfa nfa, CflatStringView *match, const CflatStringView text",
+          "decl": "CFLAT_DEF bool cflat_nfa_match_next(CflatNfa nfa, CflatStringView *match, const CflatStringView text);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_nfa_begin_group",
+          "returnType": "void",
+          "params": "CflatNfa *nfa",
+          "decl": "CFLAT_DEF void cflat_nfa_begin_group(CflatNfa *nfa);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_nfa_end_group_opt",
+          "returnType": "void",
+          "params": "CflatNfa *nfa, CflatPatternOptions opt",
+          "decl": "CFLAT_DEF void cflat_nfa_end_group_opt(CflatNfa *nfa, CflatPatternOptions opt);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_nfa_match_opt",
+          "returnType": "void",
+          "params": "CflatNfa *nfa, CflatStringView pattern, CflatPatternOptions opt",
+          "decl": "CFLAT_DEF void cflat_nfa_match_opt(CflatNfa *nfa, CflatStringView pattern, CflatPatternOptions opt);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_nfa_or_opt",
+          "returnType": "void",
+          "params": "CflatNfa *nfa, CflatStringView pattern, CflatPatternOptions opt",
+          "decl": "CFLAT_DEF void cflat_nfa_or_opt(CflatNfa *nfa, CflatStringView pattern, CflatPatternOptions opt);",
+          "doc": {}
+        }
+      ],
+      "types": [
+        {
+          "name": "CflatAdjNodeU32",
+          "doc": {},
+          "fields": [
+            {
+              "type": "u32",
+              "name": "u"
+            },
+            {
+              "type": "u32",
+              "name": "v"
+            },
+            {
+              "type": "struct cflat_adj_node_u32 *",
+              "name": "next"
+            }
+          ]
+        },
+        {
+          "name": "CflatAdjU32",
+          "doc": {},
+          "fields": [
+            {
+              "type": "usize",
+              "name": "capacity"
+            },
+            {
+              "type": "usize",
+              "name": "length"
+            },
+            {
+              "type": "CflatAdjNodeU32* *",
+              "name": "data"
+            }
+          ]
+        },
+        {
+          "name": "CflatNfa",
+          "doc": {},
+          "fields": [
+            {
+              "type": "CflatArena *",
+              "name": "arena"
+            },
+            {
+              "type": "CflatAdjU32",
+              "name": "states"
+            },
+            {
+              "type": "CflatSliceU32",
+              "name": "groups"
+            },
+            {
+              "type": "u32",
+              "name": "start"
+            },
+            {
+              "type": "bool",
+              "name": "nullable"
+            }
+          ]
+        }
+      ],
+      "enums": [
+        {
+          "name": "CflatPatternOptions",
+          "baseType": "u8",
+          "doc": "",
+          "members": [
+            {
+              "name": "CFLAT_MATCH_ONE",
+              "value": "0x00"
+            },
+            {
+              "name": "CFLAT_MATCH_ZERO_OR_MORE",
+              "value": "0x01"
+            },
+            {
+              "name": "CFLAT_MATCH_ONE_OR_MORE",
+              "value": "0x02"
+            },
+            {
+              "name": "CFLAT_MATCH_ZERO_OR_ONE",
+              "value": "0x04"
+            },
+            {
+              "name": "CFLAT_CASE_SENSTIVE",
+              "value": "0x00"
+            },
+            {
+              "name": "CFLAT_CASE_INSENSTIVE",
+              "value": "0x10"
+            }
+          ]
+        },
+        {
+          "name": "CflatMatchOptions",
+          "baseType": "u8",
+          "doc": "",
+          "members": [
+            {
+              "name": "CFLAT_MATCH_ANYWHERE",
+              "value": "0"
+            },
+            {
+              "name": "CFLAT_MATCH_BEGIN",
+              "value": "1"
+            },
+            {
+              "name": "CFLAT_MATCH_END",
+              "value": "2"
+            },
+            {
+              "name": "CFLAT_MATCH_EXACT",
+              "value": "CFLAT_MATCH_BEGIN | CFLAT_MATCH_END"
+            }
+          ]
+        }
+      ],
+      "macros": [],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-ring-buffer",
+      "header": "CflatRingBuffer.h",
+      "title": "Cflat RingBuffer module",
+      "synopsis": "",
+      "functions": [
+        {
+          "name": "cflat_ring_buffer_new_opt",
+          "returnType": "CflatRingBuffer*",
+          "params": "usize element_size, Arena *a, usize length, RingBufferNewOpt opt",
+          "decl": "CFLAT_DEF CflatRingBuffer* cflat_ring_buffer_new_opt(usize element_size, Arena *a, usize length, RingBufferNewOpt opt);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_ring_buffer_is_empty",
+          "returnType": "bool",
+          "params": "CflatRingBuffer *rb",
+          "decl": "CFLAT_DEF bool cflat_ring_buffer_is_empty (CflatRingBuffer *rb );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_ring_buffer_read_opt",
+          "returnType": "bool",
+          "params": "CflatRingBuffer *rb, usize element_size, void *dst, RingBufferReadOpt opt",
+          "decl": "CFLAT_DEF bool cflat_ring_buffer_read_opt (CflatRingBuffer *rb, usize element_size, void *dst, RingBufferReadOpt opt );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_ring_buffer_write",
+          "returnType": "bool",
+          "params": "CflatRingBuffer *rb, usize element_size, const void *src",
+          "decl": "CFLAT_DEF bool cflat_ring_buffer_write (CflatRingBuffer *rb, usize element_size, const void *src );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_ring_buffer_count",
+          "returnType": "usize",
+          "params": "CflatRingBuffer *rb",
+          "decl": "CFLAT_DEF usize cflat_ring_buffer_count (CflatRingBuffer *rb );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_ring_buffer_clear",
+          "returnType": "void",
+          "params": "CflatRingBuffer *rb",
+          "decl": "CFLAT_DEF void cflat_ring_buffer_clear (CflatRingBuffer *rb );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_ring_buffer_overwrite",
+          "returnType": "void",
+          "params": "CflatRingBuffer *rb, usize element_size, const void *src",
+          "decl": "CFLAT_DEF void cflat_ring_buffer_overwrite (CflatRingBuffer *rb, usize element_size, const void *src );",
+          "doc": {}
+        }
+      ],
+      "types": [
+        {
+          "name": "CflatRingBuffer",
+          "doc": {},
+          "fields": [
+            {
+              "type": "_Atomic isize",
+              "name": "read"
+            },
+            {
+              "type": "_Atomic isize",
+              "name": "write"
+            },
+            {
+              "type": "usize",
+              "name": "length"
+            },
+            {
+              "type": "byte",
+              "name": "data"
+            }
+          ]
+        }
+      ],
+      "enums": [],
+      "macros": [],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-slice",
+      "header": "CflatSlice.h",
+      "title": "Cflat Slice module",
+      "synopsis": "",
+      "functions": [],
+      "types": [
+        {
+          "name": "CflatByteSlice",
+          "doc": {},
+          "fields": [
+            {
+              "type": "usize",
+              "name": "capacity"
+            },
+            {
+              "type": "usize",
+              "name": "length"
+            },
+            {
+              "type": "byte *",
+              "name": "data"
+            }
+          ]
+        },
+        {
+          "name": "CflatSliceNewOpt",
+          "doc": {},
+          "fields": [
+            {
+              "type": "usize",
+              "name": "capacity"
+            },
+            {
+              "type": "usize",
+              "name": "align"
+            },
+            {
+              "type": "bool",
+              "name": "clear"
+            }
+          ]
+        }
+      ],
+      "enums": [],
+      "macros": [
+        {
+          "signature": "CFLAT_SLICE_FIELDS(T)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "CFLAT_SLICE_HEADER_FIELDS",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_at(SLICE, INDEX)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_capacity(SLICE)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_data(SLICE)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_length(SLICE)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_new(TSlice, ARENA, LEN, ...)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_skip(TSlice, SLICE, SKIP)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_slice_take(TSlice, SLICE, TAKE)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_subslice(TSlice, SLICE, OFFSET, LEN)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        }
+      ],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    },
+    {
+      "slug": "cflat-string",
+      "header": "CflatString.h",
+      "title": "Cflat String module",
+      "synopsis": "",
+      "functions": [
+        {
+          "name": "cflat_dfa_kmp_new",
+          "returnType": "CflatDfaKmp*",
+          "params": "CflatArena *a, usize rows, usize columns",
+          "decl": "CFLAT_DEF CflatDfaKmp* cflat_dfa_kmp_new (CflatArena *a, usize rows, usize columns);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_dfa_match_sv",
+          "returnType": "CflatDfaKmp*",
+          "params": "CflatDfaKmp *dfa, CflatStringView pattern",
+          "decl": "CFLAT_DEF CflatDfaKmp* cflat_dfa_match_sv (CflatDfaKmp *dfa, CflatStringView pattern);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_path_name_cstr",
+          "returnType": "CflatStringView",
+          "params": "const char *path",
+          "decl": "CFLAT_DEF CflatStringView cflat_path_name_cstr (const char *path );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_path_name_sv",
+          "returnType": "CflatStringView",
+          "params": "CflatStringView path",
+          "decl": "CFLAT_DEF CflatStringView cflat_path_name_sv (CflatStringView path );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sv_clone_cstr",
+          "returnType": "CflatStringView",
+          "params": "CflatArena *a, const char *cstr",
+          "decl": "CFLAT_DEF CflatStringView cflat_sv_clone_cstr (CflatArena *a, const char *cstr );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sv_clone_sv",
+          "returnType": "CflatStringView",
+          "params": "CflatArena *a, CflatStringView sv",
+          "decl": "CFLAT_DEF CflatStringView cflat_sv_clone_sv (CflatArena *a, CflatStringView sv );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sv_find_substring_cstr",
+          "returnType": "CflatStringView",
+          "params": "CflatStringView strnig, const char *substring",
+          "decl": "CFLAT_DEF CflatStringView cflat_sv_find_substring_cstr (CflatStringView strnig, const char *substring );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sv_find_substring_sv",
+          "returnType": "CflatStringView",
+          "params": "CflatStringView strnig, CflatStringView substring",
+          "decl": "CFLAT_DEF CflatStringView cflat_sv_find_substring_sv (CflatStringView strnig, CflatStringView substring );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sv_from_cstr",
+          "returnType": "CflatStringView",
+          "params": "const char *cstr",
+          "decl": "CFLAT_DEF CflatStringView cflat_sv_from_cstr (const char *cstr );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sv_printf",
+          "returnType": "CflatStringView",
+          "params": "CflatArena *a, const char *fmt, ...",
+          "decl": "CFLAT_DEF CflatStringView cflat_sv_printf (CflatArena *a, const char *fmt, ... );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_dfa_run_cstr",
+          "returnType": "isize",
+          "params": "CflatDfaKmp *dfa, const char *str",
+          "decl": "CFLAT_DEF isize cflat_dfa_run_cstr (CflatDfaKmp *dfa, const char *str);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_dfa_run_sv",
+          "returnType": "isize",
+          "params": "CflatDfaKmp *dfa, CflatStringView input",
+          "decl": "CFLAT_DEF isize cflat_dfa_run_sv (CflatDfaKmp *dfa, CflatStringView input);",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sv_find_index_cstr",
+          "returnType": "isize",
+          "params": "CflatStringView strnig, const char *substring",
+          "decl": "CFLAT_DEF isize cflat_sv_find_index_cstr (CflatStringView strnig, const char *substring );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sv_find_index_sv",
+          "returnType": "isize",
+          "params": "CflatStringView strnig, CflatStringView substring",
+          "decl": "CFLAT_DEF isize cflat_sv_find_index_sv (CflatStringView strnig, CflatStringView substring );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sv_find_last_index_cstr",
+          "returnType": "isize",
+          "params": "CflatStringView strnig, const char *substring",
+          "decl": "CFLAT_DEF isize cflat_sv_find_last_index_cstr(CflatStringView strnig, const char *substring );",
+          "doc": {}
+        },
+        {
+          "name": "cflat_sv_find_last_index_sv",
+          "returnType": "isize",
+          "params": "CflatStringView strnig, CflatStringView substring",
+          "decl": "CFLAT_DEF isize cflat_sv_find_last_index_sv (CflatStringView strnig, CflatStringView substring );",
+          "doc": {}
+        }
+      ],
+      "types": [
+        {
+          "name": "CflatDfaKmp",
+          "doc": {},
+          "fields": [
+            {
+              "type": "usize",
+              "name": "rows"
+            },
+            {
+              "type": "usize",
+              "name": "columns"
+            },
+            {
+              "type": "byte",
+              "name": "transitions"
+            }
+          ]
+        },
+        {
+          "name": "CflatStringView",
+          "doc": {},
+          "fields": [
+            {
+              "type": "usize",
+              "name": "capacity"
+            },
+            {
+              "type": "usize",
+              "name": "length"
+            },
+            {
+              "type": "char *",
+              "name": "data"
+            }
+          ]
+        }
+      ],
+      "enums": [],
+      "macros": [
+        {
+          "signature": "cflat_dfa_at(DFA, ROW, COL)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_dfa_kmp_match(DFA, PATTERN)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_dfa_kmp_run(DFA, PATTERN)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_path_name(path)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_sv_clone(ARENA, STR)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_sv_find_index(strnig, substring)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_sv_find_last_index(strnig, substring)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_sv_find_substring(strnig, substring)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_sv_is_nullterm(SV)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        },
+        {
+          "signature": "cflat_sv_lit(STR)",
+          "value": null,
+          "wrapper": null,
+          "doc": ""
+        }
+      ],
+      "opts": [],
+      "scopes": [],
+      "foreach": []
+    }
+  ]
+}
