@@ -1,46 +1,18 @@
 #!/usr/bin/env python3
+"""Normalize headers: add missing CFLAT_DEF, inject/clean unnamespaced aliases."""
 from __future__ import annotations
 
 import argparse
 import re
+import sys
 from pathlib import Path
 
+# Import Namespace from the doc toolchain
+_doc_path = str(Path(__file__).resolve().parent.parent / "doc")
+if _doc_path not in sys.path:
+    sys.path.insert(0, _doc_path)
+from cflatdoc.model import Namespace
 
-ALIAS_BLOCK_RE = re.compile(
-    r"(?ms)"
-    r"^(?P<start>[ \t]*#(?:if\s+!defined\s*\(|ifndef\s+)"
-    r"(?P<macro>CFLAT_[A-Z0-9_]+_NO_ALIAS)\)?[^\n]*\n)"
-    r"(?P<body>.*?)"
-    r"(?P<end>^[ \t]*#endif[^\n]*NO_ALIAS[^\n]*\n?)"
-)
-
-DEFINE_RE = re.compile(r"(?m)^[ \t]*#\s*define\s+([A-Za-z_]\w*)\s+([A-Za-z_]\w*)\b")
-
-FUNCTION_RE = re.compile(
-    r"(?m)^(?!\s*#)\s*"
-    r"(?:CFLAT_DEF\s+)?"
-    r"(?:[A-Za-z_][\w\s\*\(\)]*?\s+)"
-    r"(cflat_[A-Za-z0-9_]+)\s*"
-    r"\([^;{}]*\)\s*(?:;|\{)"
-)
-
-TYPEDEF_RE = re.compile(r"(?m)^\s*typedef\b[^;]*\b(Cflat[A-Za-z0-9_]+)\s*;")
-
-PUBLIC_DECL_RE = re.compile(
-    r"(?m)^(?P<decl>"
-    r"(?![ \t])"
-    r"(?!#)"
-    r"(?!typedef\b)"
-    r"(?!.*\bCFLAT_DEF\b)"
-    r"(?!.*\bcflat__)"
-    r"[^\n;{}]*\bcflat_[A-Za-z0-9_]+\s*\([^;{}]*\)\s*;"
-    r")\s*$"
-)
-
-IMPL_MACRO_RE = re.compile(r"(?m)^\s*#\s*define\s+(CFLAT_[A-Z0-9_]+)_IMPLEMENTATION\b")
-GUARD_MACRO_RE = re.compile(
-    r"(?m)^\s*#\s*(?:ifndef|if\s+!defined\s*\()\s*(CFLAT_[A-Z0-9_]+)_H\b"
-)
 
 C_CPP_KEYWORDS = {
     "_alignas", "_alignof", "_atomic", "_bool", "_complex", "_generic", "_imaginary",
@@ -58,6 +30,54 @@ C_CPP_KEYWORDS = {
 }
 
 
+_ns: Namespace = Namespace("cflat")
+
+ALIAS_BLOCK_RE: re.Pattern
+DEFINE_RE: re.Pattern = re.compile(r"(?m)^[ \t]*#\s*define\s+([A-Za-z_]\w*)\s+([A-Za-z_]\w*)\b")
+FUNCTION_RE: re.Pattern
+TYPEDEF_RE: re.Pattern
+PUBLIC_DECL_RE: re.Pattern
+IMPL_MACRO_RE: re.Pattern
+GUARD_MACRO_RE: re.Pattern
+
+
+def _compile(ns: Namespace) -> None:
+    global _ns, ALIAS_BLOCK_RE, FUNCTION_RE, TYPEDEF_RE, PUBLIC_DECL_RE, IMPL_MACRO_RE, GUARD_MACRO_RE
+    _ns = ns
+    ALIAS_BLOCK_RE = re.compile(
+        rf"(?ms)"
+        rf"^(?P<start>[ \t]*#(?:if\s+!defined\s*\(|ifndef\s+)"
+        rf"(?P<macro>{_ns.upper}[A-Z0-9_]+_NO_ALIAS)\)?[^\n]*\n)"
+        rf"(?P<body>.*?)"
+        rf"(?P<end>^[ \t]*#endif[^\n]*NO_ALIAS[^\n]*\n?)"
+    )
+    FUNCTION_RE = re.compile(
+        rf"(?m)^(?!\s*#)\s*"
+        rf"(?:{_ns.upper}DEF\s+)?"
+        rf"(?:[A-Za-z_][\w\s\*\(\)]*?\s+)"
+        rf"({_ns.snake}[A-Za-z0-9_]+)\s*"
+        rf"\([^;{{}}]*\)\s*(?:;|\{{)"
+    )
+    TYPEDEF_RE = re.compile(rf"(?m)^\s*typedef\b[^;]*\b({_ns.pascal}[A-Za-z0-9_]+)\s*;")
+    PUBLIC_DECL_RE = re.compile(
+        rf"(?m)^(?P<decl>"
+        rf"(?![ \t])"
+        rf"(?!#)"
+        rf"(?!typedef\b)"
+        rf"(?!.*\b{_ns.upper}DEF\b)"
+        rf"(?!.*\b{_ns.snake}_)"
+        rf"[^\n;{{}}]*\b{_ns.snake}[A-Za-z0-9_]+\s*\([^;{{}}]*\)\s*;"
+        rf")\s*$"
+    )
+    IMPL_MACRO_RE = re.compile(rf"(?m)^\s*#\s*define\s+({_ns.upper}[A-Z0-9_]+)_IMPLEMENTATION\b")
+    GUARD_MACRO_RE = re.compile(
+        rf"(?m)^\s*#\s*(?:ifndef|if\s+!defined\s*\()\s*({_ns.upper}[A-Z0-9_]+)_H\b"
+    )
+
+
+_compile(_ns)
+
+
 def to_upper_snake(name: str) -> str:
     parts = re.findall(r"[A-Z]+(?=[A-Z][a-z]|[0-9]|$)|[A-Z]?[a-z]+|[0-9]+", name)
     return "_".join(part.upper() for part in parts if part)
@@ -73,12 +93,12 @@ def derive_no_alias_macro(text: str, path: Path) -> str | None:
         return f"{guard.group(1)}_NO_ALIAS"
 
     stem = path.stem
-    if stem.startswith("Cflat"):
-        stem = stem[len("Cflat") :]
+    if stem.startswith(_ns.pascal):
+        stem = stem[len(_ns.pascal):]
     suffix = to_upper_snake(stem)
     if not suffix:
         return None
-    return f"CFLAT_{suffix}_NO_ALIAS"
+    return f"{_ns.upper}{suffix}_NO_ALIAS"
 
 
 def ensure_alias_block(text: str, path: Path) -> tuple[str, bool]:
@@ -100,15 +120,15 @@ def collect_symbols(text: str) -> list[tuple[str, str]]:
     out: set[tuple[str, str]] = set()
 
     for fn in FUNCTION_RE.findall(text):
-        if fn.startswith("cflat__"):
+        if fn.startswith(f"{_ns.snake}_"):
             continue
-        alias = fn.removeprefix("cflat_")
+        alias = fn.removeprefix(_ns.snake)
         if alias.lower() in C_CPP_KEYWORDS:
             continue
         out.add((alias, fn))
 
     for typ in TYPEDEF_RE.findall(text):
-        alias = typ.removeprefix("Cflat")
+        alias = typ.removeprefix(_ns.pascal)
         if alias and alias.lower() not in C_CPP_KEYWORDS:
             out.add((alias, typ))
 
@@ -120,7 +140,7 @@ def normalize_missing_cflat_def(text: str) -> tuple[str, int]:
         decl = match.group("decl")
         if re.search(r"\b(static|inline|extern|typedef)\b", decl):
             return match.group(0)
-        return f"CFLAT_DEF {decl.strip()}"
+        return f"{_ns.upper}DEF {decl.strip()}"
 
     return PUBLIC_DECL_RE.subn(repl, text)
 
@@ -149,7 +169,7 @@ def inject_aliases(text: str, path: Path) -> tuple[str, int, bool]:
     removed = 0
     for line in lines:
         m = DEFINE_RE.match(line.strip())
-        if m and m.group(2).startswith(("cflat_", "CFLAT_")):
+        if m and m.group(2).startswith((_ns.snake, _ns.upper)):
             target = m.group(2)
             if not re.search(rf"\b{re.escape(target)}\b", text_before + text_after):
                 removed += 1
@@ -188,16 +208,26 @@ def target_files(paths: list[str]) -> list[Path]:
     return sorted((repo_root / "src").glob("*.h"))
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
 def main() -> int:
+    repo = _repo_root()
     parser = argparse.ArgumentParser(
         description=(
-            "Normalize Cflat headers by adding missing CFLAT_DEF on public cflat_* "
-            "declarations and injecting missing unnamespaced aliases."
+            f"Normalize {repo.name} headers by adding missing export macros on public "
+            f"declarations and injecting missing unnamespaced aliases."
         )
     )
     parser.add_argument("paths", nargs="*", help="Header files to process (defaults to src/*.h)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would change without writing")
+    parser.add_argument("--namespace", default=None,
+                        help=f"Library namespace (default: inferred from repo root: '{repo.name.lower()}')")
     args = parser.parse_args()
+
+    ns = Namespace(args.namespace) if args.namespace else Namespace.infer(repo)
+    _compile(ns)
 
     changed_files = 0
     added_defs = 0
@@ -219,7 +249,7 @@ def main() -> int:
         if block_created:
             created_blocks += 1
         print(
-            f"{path}: +{defs_count} CFLAT_DEF, {'~' if aliases_count else '='}{aliases_count} aliases, "
+            f"{path}: +{defs_count} {_ns.upper}DEF, {'~' if aliases_count else '='}{aliases_count} aliases, "
             f"{'+1 alias block' if block_created else '+0 alias block'}"
         )
 
@@ -231,7 +261,7 @@ def main() -> int:
     else:
         print(
             f"Updated {changed_files} file(s), inserted "
-            f"{added_defs} CFLAT_DEF, {added_aliases} alias(es), "
+            f"{added_defs} {_ns.upper}DEF, {added_aliases} alias(es), "
             f"created {created_blocks} alias block(s)."
         )
 

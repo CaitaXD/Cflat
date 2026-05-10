@@ -9,51 +9,79 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .model import DocInfo, EnumDoc, ModuleDoc
+from .model import DocInfo, EnumDoc, ModuleDoc, Namespace
 
 # ---------------------------------------------------------------- patterns ---
 
 DOC_COMMENT = r"(?:/\*\*?(?:[^*]|\*(?!/))*\*/|(?:(?:///[^\n]*\n)+))"
-DECL_PATTERN = r"(?:CFLAT_DEF\s+)?[^\n;{}]*\bcflat_[A-Za-z0-9_]+\b\s*\([^;{}]*\)\s*;"
-MACRO_PATTERN = r"#\s*define\s+((?:cflat_|CFLAT_)[A-Za-z0-9_]+(?:\s*\([^)]*\))?)"
-ENUM_PATTERN = r"cflat_enum\s*\(\s*(Cflat[A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)\s*\)\s*\{(.*?)\};"
-TYPEDEF_FULL = (
-    r"typedef\s+(?:struct|union)\s+\w*\s*\{(?:[^{}]|\{[^{}]*\})*\}\s*(?:\w+\s+)*Cflat[A-Za-z0-9_]+\s*;"
+
+_ns: Namespace = Namespace("cflat")
+
+DECL_PATTERN_STR = r"(?:{upper}DEF\s+)?[^\n;{}]*\b{snake}[A-Za-z0-9_]+\b\s*\([^;{}]*\)\s*;"
+MACRO_PATTERN_STR = r"#\s*define\s+((?:{snake}|{upper})[A-Za-z0-9_]+(?:\s*\([^)]*\))?)"
+ENUM_PATTERN_STR = r"{snake}enum\s*\(\s*({pascal}[A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)\s*\)\s*\{(.*?)\};"
+TYPEDEF_FULL_STR = (
+    r"typedef\s+(?:struct|union)\s+\w*\s*\{(?:[^{}]|\{[^{}]*\})*\}\s*(?:\w+\s+)*{pascal}[A-Za-z0-9_]+\s*;"
     r"|"
-    r"typedef\b(?!\s+(?:struct|union)\s+\w*\s*\{)[^;]*\bCflat[A-Za-z0-9_]+\s*;"
+    r"typedef\b(?!\s+(?:struct|union)\s+\w*\s*\{)[^;]*\b{pascal}[A-Za-z0-9_]+\s*;"
 )
 
-DECL_RE = re.compile(rf"(?m)^(?![ \t])(?!\s*#)(?!\s*typedef\b)\s*{DECL_PATTERN}")
-TYPEDEF_RE = re.compile(r"(?m)^\s*typedef\b[^;{]*\b(Cflat[A-Za-z0-9_]+)\s*;")
-TYPEDEF_STRUCT_RE = re.compile(
-    r"(?ms)^\s*typedef\s+(?:struct|union)\s+\w*\s*\{(?:[^{}]|\{[^{}]*\})*\}\s*(?:\w+\s+)*(Cflat[A-Za-z0-9_]+)\s*;"
-)
-TYPEDEF_DOC_RE = re.compile(rf"(?ms)(?P<doc>{DOC_COMMENT})\s*(?P<typedef>{TYPEDEF_FULL})")
-MACRO_DEF_RE = re.compile(rf"(?m)^\s*{MACRO_PATTERN}")
-SIMPLE_MACRO_RE = re.compile(
-    r"(?m)^\s*#\s*define\s+((?:cflat_|CFLAT_)[A-Za-z0-9_]+)\s+([^\n\\]+?)\s*$"
-)
-MACRO_BODY_RE = re.compile(
-    r"(?m)^\s*#\s*define\s+((?:cflat_|CFLAT_)[A-Za-z0-9_]+(?:\s*\([^)]*\))?)\s+([^\n]+)$"
-)
-ENUM_RE = re.compile(rf"(?ms){ENUM_PATTERN}")
-DECL_DOC_RE = re.compile(rf"(?ms)(?P<doc>{DOC_COMMENT})\s*(?P<decl>{DECL_PATTERN})")
-MACRO_DOC_RE = re.compile(rf"(?ms)(?P<doc>{DOC_COMMENT})\s*(?P<macro>{MACRO_PATTERN})")
-ENUM_DOC_RE = re.compile(rf"(?ms)(?P<doc>{DOC_COMMENT})\s*(?P<enum>{ENUM_PATTERN})")
-TYPEDEF_FWD_RE = re.compile(
-    r"typedef\s+(?:struct|union)\s+(\w+)\s+(Cflat[A-Za-z0-9_]+)\s*;"
-)
-STRUCT_DEF_RE = re.compile(
-    r"(?ms)^\s*struct\s+(\w+)\s*\{(.*?)\}\s*;"
-)
-PUBLIC_SPLIT_RE = re.compile(r"(?m)^#\s*(?:if\s+defined\(|ifdef\s+)CFLAT_IMPLEMENTATION\b")
+DEF_RE_PATTERN_STR = r"^\s*#\s*define\s+((?:{snake}|{upper})[A-Za-z0-9_]+(?:\s*\([^)]*\))?)\s*(.*)$"
+DEF_RE_STR_STR = r"(?m)^\s*#\s*define\s+((?:{snake}|{upper})[A-Za-z0-9_]+)\s+([^\n\\]+?)\s*$"
+FUNC_DECL_PATTERN_STR = r"^(?P<prefix>.*?)\b(?P<name>{snake}[A-Za-z0-9_]+)\s*\((?P<params>.*)\)\s*;$"
 
-# ---------- struct body macro expanders --------------------------------------
+TYPEDEF_RE_STR = r"(?m)^\s*typedef\b[^;{]*\b({pascal}[A-Za-z0-9_]+)\s*;"
+TYPEDEF_STRUCT_RE_STR = (
+    r"(?ms)^\s*typedef\s+(?:struct|union)\s+\w*\s*\{(?:[^{}]|\{[^{}]*\})*\}\s*(?:\w+\s+)*({pascal}[A-Za-z0-9_]+)\s*;"
+)
+TYPEDEF_FWD_RE_STR = r"typedef\s+(?:struct|union)\s+(\w+)\s+({pascal}[A-Za-z0-9_]+)\s*;"
+PUBLIC_SPLIT_STR = r"(?m)^#\s*(?:if\s+defined\(|ifdef\s+){upper}IMPLEMENTATION\b"
 
-STRUCT_MACRO_EXPANDERS: list[tuple[re.Pattern, str | callable]] = [
-    (re.compile(r"CFLAT_SLICE_HEADER_FIELDS"),          "usize capacity;\n    usize length"),
-    (re.compile(r"CFLAT_SLICE_FIELDS\(([^)]+)\)"),      "usize capacity;\n    usize length;\n    \\1 *data"),
-]
+STRUCT_DEF_RE = re.compile(r"(?ms)^\s*struct\s+(\w+)\s*\{(.*?)\}\s*;")
+
+
+def _fill(p: str) -> str:
+    return p.replace("{snake}", _ns.snake).replace("{upper}", _ns.upper).replace("{pascal}", _ns.pascal)
+
+
+def _compile(snake: str, upper: str, pascal: str) -> None:
+    """Compile all namespace-dependent regex patterns."""
+    global DECL_RE, TYPEDEF_RE, TYPEDEF_STRUCT_RE, TYPEDEF_DOC_RE
+    global MACRO_DEF_RE, SIMPLE_MACRO_RE, MACRO_BODY_RE
+    global ENUM_RE, DECL_DOC_RE, MACRO_DOC_RE, ENUM_DOC_RE
+    global TYPEDEF_FWD_RE, PUBLIC_SPLIT_RE
+    global STRUCT_MACRO_EXPANDERS
+
+    def t(s: str) -> str:
+        return s.replace("{snake}", snake).replace("{upper}", upper).replace("{pascal}", pascal)
+
+    dp = t(DECL_PATTERN_STR)
+    mp = t(MACRO_PATTERN_STR)
+    ep = t(ENUM_PATTERN_STR)
+    tf = t(TYPEDEF_FULL_STR)
+
+    DECL_RE = re.compile(rf"(?m)^(?![ \t])(?!\s*#)(?!\s*typedef\b)\s*{dp}")
+    TYPEDEF_RE = re.compile(t(TYPEDEF_RE_STR))
+    TYPEDEF_STRUCT_RE = re.compile(t(TYPEDEF_STRUCT_RE_STR))
+    TYPEDEF_DOC_RE = re.compile(rf"(?ms)(?P<doc>{DOC_COMMENT})\s*(?P<typedef>{tf})")
+    MACRO_DEF_RE = re.compile(rf"(?m)^\s*{mp}")
+    SIMPLE_MACRO_RE = re.compile(t(DEF_RE_STR_STR))
+    MACRO_BODY_RE = re.compile(rf"(?m)^\s*" + t(MACRO_PATTERN_STR) + r"\s+([^\n]+)$")
+    ENUM_RE = re.compile(rf"(?ms){ep}")
+    DECL_DOC_RE = re.compile(rf"(?ms)(?P<doc>{DOC_COMMENT})\s*(?P<decl>{dp})")
+    MACRO_DOC_RE = re.compile(rf"(?ms)(?P<doc>{DOC_COMMENT})\s*(?P<macro>{mp})")
+    ENUM_DOC_RE = re.compile(rf"(?ms)(?P<doc>{DOC_COMMENT})\s*(?P<enum>{ep})")
+    TYPEDEF_FWD_RE = re.compile(t(TYPEDEF_FWD_RE_STR))
+    PUBLIC_SPLIT_RE = re.compile(t(PUBLIC_SPLIT_STR))
+
+    STRUCT_MACRO_EXPANDERS = [
+        (re.compile(t(r"{upper}SLICE_HEADER_FIELDS")),          "usize capacity;\n    usize length"),
+        (re.compile(t(r"{upper}SLICE_FIELDS\(([^)]+)\)")),      "usize capacity;\n    usize length;\n    \\1 *data"),
+    ]
+
+
+_compile(_ns.snake, _ns.upper, _ns.pascal)
+
 
 def expand_struct_body(body: str) -> str:
     for pat, repl in STRUCT_MACRO_EXPANDERS:
@@ -148,7 +176,11 @@ def parse_doc_comment(doc_text: str) -> DocInfo:
         nonlocal tag, tag_key, tag_body
         body = " ".join(tag_body).strip()
         if tag == "param" and tag_key:
-            info.params[tag_key] = body
+            prev = info.params.get(tag_key)
+            if prev and (body.startswith("@if(") or body.startswith("@else")):
+                info.params[tag_key] = prev + "\n" + body
+            else:
+                info.params[tag_key] = body
         elif tag == "return":
             info.returns = body
         elif tag == "precondition":
@@ -215,13 +247,13 @@ def parse_enum_members(body: str) -> list[str]:
             depth -= 1
         if ch == "," and depth == 0:
             m = " ".join("".join(token).strip().split())
-            if m and "cflat__" not in m and "CFLAT__" not in m:
+            if m and f"{_ns.snake}_" not in m and f"{_ns.upper}_" not in m:
                 members.append(m)
             token = []
             continue
         token.append(ch)
     tail = " ".join("".join(token).strip().split())
-    if tail and "cflat__" not in tail and "CFLAT__" not in tail:
+    if tail and f"{_ns.snake}_" not in tail and f"{_ns.upper}_" not in tail:
         members.append(tail)
     return members
 
@@ -371,7 +403,7 @@ def is_generic_macro_param(name: str, body: str) -> bool:
         return False
     pats = (
         rf"\bsizeof\s*\(\s*{re.escape(name)}\s*\)",
-        rf"\bcflat_alignof\s*\(\s*{re.escape(name)}\s*\)",
+        rf"\b{_ns.snake}alignof\s*\(\s*{re.escape(name)}\s*\)",
         rf"\(\s*{re.escape(name)}\s*\*\s*\)\s*NULL",
     )
     return any(re.search(p, body) for p in pats)
@@ -425,6 +457,75 @@ def parse_macro_opt_wrappers(public_text: str, macros: list[str]) -> dict:
     return wrappers
 
 
+_COND_RE = re.compile(
+    r"(?m)^\s*#\s*if(?:n?def)?\s+(?P<cond>.+?)$"
+)
+
+
+def detect_cond_compilation(body: str) -> list[tuple[str, str, str]]:
+    """Detect ``#if``/``#else``/``#endif`` blocks inside a struct body.
+    
+    Returns ``[(condition, if_branch_types, else_branch_types), …]``.
+    Each branch string is a compact representation of the field types
+    (e.g. ``"__m256 v"`` / ``"f32 v[8]"``).
+    """
+    results: list[tuple[str, str, str]] = []
+    lines = body.splitlines()
+    i = 0
+    while i < len(lines):
+        s = lines[i].strip()
+        m = _COND_RE.match(lines[i]) if re.match(r"#\s*if", s) else None
+        if not m:
+            i += 1
+            continue
+        cond = m.group("cond").strip()
+        if_branch: list[str] = []
+        else_branch: list[str] = []
+        depth = 1
+        i += 1
+        side = "if"
+        while i < len(lines) and depth > 0:
+            s2 = lines[i].strip()
+            if re.match(r"#\s*if(?:n?def)?\b", s2):
+                depth += 1
+                (if_branch if side == "if" else else_branch).append(lines[i])
+            elif s2.startswith("#elif") and depth == 1:
+                side = "else"
+            elif s2 == "#else" and depth == 1:
+                side = "else"
+            elif re.match(r"#\s*endif\b", s2):
+                depth -= 1
+            else:
+                (if_branch if side == "if" else else_branch).append(lines[i])
+            i += 1
+
+        def _types(lines: list[str]) -> str:
+            parts: list[str] = []
+            for l in lines:
+                l = l.strip()
+                if not l.endswith(";"):
+                    continue
+                l = l[:-1].strip()
+                l = re.sub(rf"\b{_ns.snake}alignas\s*\([^)]*\)\s*", "", l).strip()
+                toks = l.split()
+                if len(toks) >= 2:
+                    decl = toks[-1]
+                    ftype = " ".join(toks[:-1])
+                    m = re.match(r'^([A-Za-z_]\w*)((?:\[[^\]]*\])+)$', decl)
+                    if m:
+                        decl = m.group(1)
+                        ftype = f"{ftype}{m.group(2)}"
+                    parts.append(f"{ftype} {decl}")
+            return ", ".join(parts) if parts else "(none)"
+
+        if_types = _types(if_branch)
+        else_types = _types(else_branch)
+        if if_types or else_types:
+            results.append((cond, if_types, else_types))
+        i += 1
+    return results
+
+
 def extract_struct_fields(body: str) -> list[tuple[str, str]]:
     body = re.sub(r"(?ms)/\*.*?\*/", "", body)
     body = re.sub(r"//[^\n]*", "", body)
@@ -437,6 +538,10 @@ def extract_struct_fields(body: str) -> list[tuple[str, str]]:
             decl = decl[1:]
         if star:
             ftype = f"{ftype} {star}".strip()
+        m = re.match(r'^([A-Za-z_]\w*)((?:\[[^\]]*\])+)$', decl)
+        if m:
+            decl = m.group(1)
+            ftype = f"{ftype}{m.group(2)}"
         fields.append((" ".join(ftype.split()), decl))
 
     for line in body.splitlines():
@@ -444,7 +549,7 @@ def extract_struct_fields(body: str) -> list[tuple[str, str]]:
         if not line or not line.endswith(";"):
             continue
         line = line[:-1].strip()
-        line = re.sub(r"\s*\[[^\]]+\]", "", line).strip()
+        line = re.sub(rf"\b{_ns.snake}alignas\s*\([^)]*\)\s*", "", line).strip()
         line = re.sub(r"\s*:\s*\d+", "", line).strip()
         if not line:
             continue
@@ -488,18 +593,19 @@ def detect_fields_macro_backed(
         if not clean:
             return
         remainder = re.sub(
-            r"\s*CFLAT_\w+_FIELDS(?:\([^)]*\))?\s*;?\s*", "", clean
+            rf"\s*{_ns.upper}\w+_FIELDS(?:\([^)]*\))?\s*;?\s*", "", clean
         ).strip()
         if remainder:
             return
-        macros = re.findall(r"CFLAT_\w+_FIELDS", clean)
+        macros = re.findall(rf"{_ns.upper}\w+_FIELDS", clean)
         if macros:
             result[name] = list(OrderedDict.fromkeys(macros))
 
-    sre = re.compile(
+    _P = (
         r"(?ms)typedef\s+(?:struct|union)\b[^{]*\{(?P<body>.*?)\}"
-        r"\s*(?:\w+\s+)*(?P<name>Cflat[A-Za-z0-9_]+)\s*;"
+        r"\s*(?:\w+\s+)*(?P<name>PASCAL[A-Za-z0-9_]+)\s*;"
     )
+    sre = re.compile(_P.replace("PASCAL", _ns.pascal))
     for m in sre.finditer(public_text):
         _check(m.group("name"), m.group("body"))
 
@@ -513,7 +619,8 @@ def detect_fields_macro_backed(
 
 def parse_struct_fields(public_text: str) -> dict[str, list[tuple[str, str]]]:
     out: dict = {}
-    sre = re.compile(r"(?ms)typedef\s+(?:struct|union)\b[^{]*\{(?P<body>.*?)\}\s*(?:\w+\s+)*(?P<name>Cflat[A-Za-z0-9_]+)\s*;")
+    _P = r"(?ms)typedef\s+(?:struct|union)\b[^{]*\{(?P<body>.*?)\}\s*(?:\w+\s+)*(?P<name>PASCAL[A-Za-z0-9_]+)\s*;"
+    sre = re.compile(_P.replace("PASCAL", _ns.pascal))
     for m in sre.finditer(public_text):
         body = expand_struct_body(m.group("body"))
         f = extract_struct_fields(body)
@@ -524,7 +631,8 @@ def parse_struct_fields(public_text: str) -> dict[str, list[tuple[str, str]]]:
 
 def parse_opt_struct_fields(public_text: str) -> dict[str, list[tuple[str, str]]]:
     out: dict = {}
-    sre = re.compile(r"(?ms)typedef\s+struct\b[^{]*\{(?P<body>.*?)\}\s*(?P<name>Cflat[A-Za-z0-9_]+)\s*;")
+    _P = r"(?ms)typedef\s+struct\b[^{]*\{(?P<body>.*?)\}\s*(?P<name>PASCAL[A-Za-z0-9_]+)\s*;"
+    sre = re.compile(_P.replace("PASCAL", _ns.pascal))
     for m in sre.finditer(public_text):
         name = m.group("name")
         if not name.endswith("Opt"):
@@ -546,7 +654,7 @@ def parse_macro_bodies(public_text: str) -> dict[str, str]:
     bodies: dict = {}
     lines = public_text.splitlines()
     define_re = re.compile(
-        r"^\s*#\s*define\s+((?:cflat_|CFLAT_)[A-Za-z0-9_]+(?:\s*\([^)]*\))?)\s*(.*)$"
+        rf"^\s*#\s*define\s+((?:{_ns.snake}|{_ns.upper})[A-Za-z0-9_]+(?:\s*\([^)]*\))?)\s*(.*)$"
     )
     i = 0
     while i < len(lines):
@@ -606,18 +714,22 @@ def extract_top_level_comments(text: str) -> list[str]:
 
 def parse_function_decl(decl: str) -> tuple[str, str, str] | None:
     m = re.match(
-        r"^(?P<prefix>.*?)\b(?P<name>cflat_[A-Za-z0-9_]+)\s*\((?P<params>.*)\)\s*;$",
+        rf"^(?P<prefix>.*?)\b(?P<name>{_ns.snake}[A-Za-z0-9_]+)\s*\((?P<params>.*)\)\s*;$",
         decl,
     )
     if not m:
         return None
-    return_type = re.sub(r"^CFLAT_DEF\s+", "", m.group("prefix")).strip()
+    return_type = re.sub(rf"^{_ns.upper}DEF\s+", "", m.group("prefix")).strip()
     return m.group("name"), return_type, m.group("params").strip()
 
 
 # ---------------------------------------------------------------- header -----
 
-def parse_header(header: Path) -> ModuleDoc:
+def parse_header(header: Path, ns: Namespace | None = None) -> ModuleDoc:
+    global _ns
+    if ns is not None and ns != _ns:
+        _ns = ns
+        _compile(_ns.snake, _ns.upper, _ns.pascal)
     text = header.read_text(encoding="utf-8")
     public = PUBLIC_SPLIT_RE.split(text, maxsplit=1)[0]
 
@@ -626,7 +738,7 @@ def parse_header(header: Path) -> ModuleDoc:
     declaration_docs: dict[str, str] = {}
     for m in DECL_DOC_RE.finditer(public):
         decl = normalize_decl(m.group("decl"))
-        if "cflat__" in decl:
+        if f"{_ns.snake}_" in decl:
             continue
         d = clean_doc_comment(m.group("doc"))
         if d:
@@ -635,13 +747,13 @@ def parse_header(header: Path) -> ModuleDoc:
     macro_docs: dict[str, str] = {}
     for m in MACRO_DOC_RE.finditer(public):
         macro = " ".join(m.group("macro").strip().split())
-        if macro.startswith("cflat__") or macro.startswith("CFLAT__"):
+        if macro.startswith(f"{_ns.snake}_") or macro.startswith(f"{_ns.upper}_"):
             continue
         d = clean_doc_comment(m.group("doc"))
         if d:
             macro_docs[macro] = d
 
-    decls = sorted({normalize_decl(d) for d in DECL_RE.findall(public) if "cflat__" not in d})
+    decls = sorted({normalize_decl(d) for d in DECL_RE.findall(public) if f"{_ns.snake}_" not in d})
     typedefs = sorted(set(TYPEDEF_RE.findall(public)))
     guarded = _collect_guard_regions(public)
     for m in TYPEDEF_STRUCT_RE.finditer(public):
@@ -653,8 +765,8 @@ def parse_header(header: Path) -> ModuleDoc:
     macros = sorted({
         " ".join(m.strip().split())
         for m in MACRO_DEF_RE.findall(public)
-        if not m.startswith("cflat__")
-        and not m.startswith("CFLAT__")
+        if not m.startswith(f"{_ns.snake}_")
+        and not m.startswith(f"{_ns.upper}_")
         and not m.endswith("_H")
         and not m.endswith("_IMPLEMENTATION")
         and not m.endswith("_NO_ALIAS")
@@ -690,19 +802,19 @@ def parse_header(header: Path) -> ModuleDoc:
         members = parse_enum_members(m.group(3))
         enums.append(EnumDoc(
             name=name, base_type=base,
-            signature=f"cflat_enum({name}, {base})",
+            signature=f"{_ns.snake}enum({name}, {base})",
             members=members, doc=enum_doc_by_name.get(name, ""),
         ))
 
     struct_tags: dict[str, str] = {}
     for m in TYPEDEF_FWD_RE.finditer(public):
         tag, name = m.group(1), m.group(2)
-        if not tag.startswith("cflat__"):
+        if not tag.startswith(f"{_ns.snake}_"):
             struct_tags[tag] = name
     for m in TYPEDEF_STRUCT_RE.finditer(public):
         decl = m.group(0)
         tag_m = re.search(r"typedef\s+(?:struct|union)\s+(\w+)", decl)
-        if tag_m and not tag_m.group(1).startswith("cflat__"):
+        if tag_m and not tag_m.group(1).startswith(f"{_ns.snake}_"):
             struct_tags[tag_m.group(1)] = m.group(1)
     for m in STRUCT_DEF_RE.finditer(public):
         tag, body = m.group(1), m.group(2)
@@ -715,6 +827,22 @@ def parse_header(header: Path) -> ModuleDoc:
 
     backed_by_fields_macro = detect_fields_macro_backed(public, struct_tags)
 
+    cond_compilation: dict[str, list[tuple[str, str, str]]] = {}
+    _P = r"(?ms)typedef\s+(?:struct|union)\b[^{]*\{(?P<body>.*?)\}\s*(?:\w+\s+)*(?P<name>PASCAL[A-Za-z0-9_]+)\s*;"
+    sre = re.compile(_P.replace("PASCAL", _ns.pascal))
+    for m in sre.finditer(public):
+        name = m.group("name")
+        c = detect_cond_compilation(m.group("body"))
+        if c:
+            cond_compilation[name] = c
+    for m in STRUCT_DEF_RE.finditer(public):
+        tag = m.group(1)
+        if tag in struct_tags:
+            name = struct_tags[tag]
+            c = detect_cond_compilation(m.group(2))
+            if c:
+                cond_compilation[name] = c
+
     # Drop guarded types from struct_fields so they don't get doc entries
     for m in TYPEDEF_STRUCT_RE.finditer(public):
         name = m.group(1)
@@ -723,12 +851,12 @@ def parse_header(header: Path) -> ModuleDoc:
             del struct_fields[name]
 
     stem = header.stem
-    module = stem.removeprefix("Cflat")
-    slug = f"cflat-{re.sub(r'([a-z0-9])([A-Z])', r'\1-\2', module).lower()}"
+    module = stem.removeprefix(_ns.pascal)
+    slug = f"{_ns.slug}-{re.sub(r'([a-z0-9])([A-Z])', r'\1-\2', module).lower()}"
     return ModuleDoc(
         module_name=slug,
         header_name=header.name,
-        title=f"Cflat {module} module",
+        title=f"{_ns.pascal} {module} module",
         synopsis_comments=synopsis,
         typedefs=typedefs,
         declarations=decls,
@@ -744,4 +872,5 @@ def parse_header(header: Path) -> ModuleDoc:
         enums=enums,
         struct_tags=struct_tags,
         backed_by_fields_macro=backed_by_fields_macro,
+        cond_compilation=cond_compilation,
     )

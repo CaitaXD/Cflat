@@ -2,7 +2,7 @@
 from __future__ import annotations
 import re
 from pathlib import Path
-from .model import ModuleDoc, EnumDoc, DocInfo
+from .model import ModuleDoc, EnumDoc, DocInfo, Namespace
 from .parsing import parse_doc_comment
 from .sections import collect_module_sections, resolve_param_doc
 
@@ -14,6 +14,7 @@ _current_module = ""
 _type_map: dict[str, str] = {}
 _fn_map: dict[str, str] = {}
 _macro_map: dict[str, str] = {}
+_ns: Namespace = Namespace("cflat")
 
 
 def _href(target_module: str, anchor: str) -> str:
@@ -48,8 +49,8 @@ def _build_all_types(modules: list[ModuleDoc]) -> set[str]:
 
 def _module_prefix_map(modules: list[ModuleDoc]) -> dict[str, str]:
     return {
-        h.removesuffix(".h").removeprefix("Cflat"): m.module_name
-        for m in modules if (h := m.header_name).startswith("Cflat")
+        h.removesuffix(".h").removeprefix(_ns.pascal): m.module_name
+        for m in modules if (h := m.header_name).startswith(_ns.pascal)
     }
 
 
@@ -61,7 +62,7 @@ def _generic_prefixes(modules: list[ModuleDoc],
         p = rev.get(mod.module_name)
         if p is None:
             continue
-        expected = f"CFLAT_{p.upper()}_FIELDS"
+        expected = f"{_ns.upper}{p.upper()}_FIELDS"
         if any(expected == s.split("(")[0].strip() for s in mod.macros):
             gen.add(p)
     return gen
@@ -69,9 +70,9 @@ def _generic_prefixes(modules: list[ModuleDoc],
 
 def _is_generic_derived(name: str, pmap: dict[str, str],
                         gen: set[str], all_types: set[str]) -> bool:
-    if not name.startswith("Cflat"):
+    if not name.startswith(_ns.pascal):
         return False
-    rest = name[5:]
+    rest = name[len(_ns.pascal):]
     for p in sorted(gen, key=len, reverse=True):
         if rest.startswith(p):
             suffix = rest[len(p):]
@@ -82,9 +83,9 @@ def _is_generic_derived(name: str, pmap: dict[str, str],
 
 def _generic_slug(name: str, pmap: dict[str, str],
                   gen: set[str], all_types: set[str]) -> str | None:
-    if not name.startswith("Cflat"):
+    if not name.startswith(_ns.pascal):
         return None
-    rest = name[5:]
+    rest = name[len(_ns.pascal):]
     for p in sorted(gen, key=len, reverse=True):
         if rest.startswith(p):
             suffix = rest[len(p):]
@@ -131,7 +132,7 @@ def build_macro_map(modules: list[ModuleDoc]) -> dict[str, str]:
     for mod in modules:
         for sig in mod.macros:
             name = _macro_name(sig)
-            if name and not name.startswith("cflat__"):
+            if name and not name.startswith(f"{_ns.snake}_"):
                 m[name] = _href(mod.module_name, name)
     return m
 
@@ -193,9 +194,9 @@ def highlight_c(code: str) -> str:
             elif tok in _macro_map:
                 out.append(f'<a class="tk-macro" href="{_macro_map[tok]}">{esc(tok)}</a>')
                 i = j; continue
-            elif tok.startswith("Cflat") or tok.endswith("_t") or tok in {"size_t","ssize_t","u8","u16","u32","u64","i8","i16","i32","i64","f32","f64","usize","isize","uptr","iptr"}:
+            elif tok.startswith(_ns.pascal) or tok.endswith("_t") or tok in {"size_t","ssize_t","u8","u16","u32","u64","i8","i16","i32","i64","f32","f64","usize","isize","uptr","iptr"}:
                 cls = "tk-type"
-            elif tok.startswith("cflat_") or (j < n and code[j] == '('):
+            elif tok.startswith(_ns.snake) or (j < n and code[j] == '('):
                 cls = "tk-fn"
             out.append(f'<span class="{cls}">{esc(tok)}</span>' if cls else esc(tok))
             i = j; continue
@@ -387,14 +388,17 @@ def _sidebar_for_module(doc: ModuleDoc, sec, type_names: list[str],
     return "".join(parts)
 
 
-def render_module_html(doc: ModuleDoc, all_modules: list[ModuleDoc]) -> str:
-    global _type_map, _fn_map, _macro_map, _current_module
+def render_module_html(doc: ModuleDoc, all_modules: list[ModuleDoc],
+                       ns: Namespace | None = None) -> str:
+    global _type_map, _fn_map, _macro_map, _current_module, _ns
+    if ns:
+        _ns = ns
     _current_module = doc.module_name
     _type_map = build_type_map(all_modules)
     _fn_map = build_fn_map(all_modules)
     _macro_map = build_macro_map(all_modules)
-    sec = collect_module_sections(doc)
-
+    sec = collect_module_sections(doc, _ns)
+ 
     pmap = _module_prefix_map(all_modules)
     gen = _generic_prefixes(all_modules, pmap)
     all_types = _build_all_types(all_modules)
@@ -451,10 +455,42 @@ def render_module_html(doc: ModuleDoc, all_modules: list[ModuleDoc]) -> str:
                             if m: field_descs[m.group(1)] = m.group(2)
                     else:
                         field_descs[pn] = pd
-                rows = ['<table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>']
-                for ft, fn in fields:
-                    fd = field_descs.get(fn, "")
-                    rows.append(f'<tr><td><code>{esc(fn)}</code></td><td><code>{_link_type_names(esc(ft))}</code></td><td>{_link_type_names(md_to_html(fd))}</td></tr>')
+                conds = doc.cond_compilation.get(tn)
+                rows = ['<table><thead><tr><th>Field</th><th>Type</th><th>Description</th>']
+                if conds:
+                    rows.append('<th>Conditional</th>')
+                rows.append('</tr></thead><tbody>')
+                if conds:
+                    branch_map: dict[str, str] = {}
+                    for cond, if_types, else_types in conds:
+                        m = re.search(r'defined\s*\(\s*(\w+)\s*\)', cond)
+                        short = m.group(1) if m else cond.strip()
+                        for item in if_types.split(", "):
+                            item = item.strip()
+                            if item: branch_map[item] = f'<b>{esc(short)}</b>'
+                        for item in else_types.split(", "):
+                            item = item.strip()
+                            if item: branch_map[item] = '<span style="color:var(--muted)">else</span>'
+                    for ft, fn in fields:
+                        key = f"{ft} {fn}"
+                        marker = branch_map.get(key, "")
+                        fd = field_descs.get(fn, "")
+                        desc_text = fd
+                        if "\n" in fd:
+                            for part in fd.split("\n"):
+                                part = part.strip()
+                                if part.startswith("@if("):
+                                    if "else" not in marker:
+                                        desc_text = re.sub(r"^@if\(.*?\)\s*", "", part)
+                                elif part.startswith("@else"):
+                                    if "else" in marker:
+                                        desc_text = re.sub(r"^@else\s*", "", part)
+                        desc = _link_type_names(md_to_html(desc_text))
+                        rows.append(f'<tr><td><code>{esc(fn)}</code></td><td><code>{_link_type_names(esc(ft))}</code></td><td>{desc}</td><td>{marker}</td></tr>')
+                else:
+                    for ft, fn in fields:
+                        fd = field_descs.get(fn, "")
+                        rows.append(f'<tr><td><code>{esc(fn)}</code></td><td><code>{_link_type_names(esc(ft))}</code></td><td>{_link_type_names(md_to_html(fd))}</td></tr>')
                 rows.append('</tbody></table>')
                 inner.append("".join(rows))
             macros = doc.backed_by_fields_macro.get(tn)
@@ -471,6 +507,8 @@ def render_module_html(doc: ModuleDoc, all_modules: list[ModuleDoc]) -> str:
                 else:
                     inner.append(f'<div class="generic-note">Backed by '
                                  f'{", ".join(links[:-1])} + {links[-1]}</div>')
+            if doc.cond_compilation.get(tn):
+                inner.append('<div class="generic-note">Conditional</div>')
             body.append(_entry("type", "type", tn, head, "".join(inner)))
         for e in doc.enums:
             head = f'<h3>{_link_type_names(esc(e.name))} <span style="color:var(--muted);font-weight:400">: {_link_type_names(esc(e.base_type))}</span></h3>'
@@ -539,14 +577,17 @@ def render_module_html(doc: ModuleDoc, all_modules: list[ModuleDoc]) -> str:
     return _shell(doc.title, _sidebar_for_module(doc, sec, type_names, all_modules), "".join(body), crumbs)
 
 
-def render_index_html(modules: list[ModuleDoc], synopsis: list[str]) -> str:
-    global _type_map, _fn_map, _macro_map, _current_module
+def render_index_html(modules: list[ModuleDoc], synopsis: list[str],
+                      ns: Namespace | None = None) -> str:
+    global _type_map, _fn_map, _macro_map, _current_module, _ns
+    if ns:
+        _ns = ns
     _current_module = ""
     _type_map = build_type_map(modules)
     _fn_map = build_fn_map(modules)
     _macro_map = build_macro_map(modules)
     sidebar_parts = [
-        '<div class="brand"><span class="dot"></span> Cflat Docs</div>',
+        f'<div class="brand"><span class="dot"></span> {_ns.pascal} Docs</div>',
         '<input id="search" class="search" placeholder="Search (⌘K)" autocomplete="off">',
         '<div class="nav-section"><h4>Modules</h4>',
     ]
@@ -554,7 +595,7 @@ def render_index_html(modules: list[ModuleDoc], synopsis: list[str]) -> str:
         sidebar_parts.append(f'<a class="nav-link" href="{esc(m.module_name)}.html">{esc(m.module_name)}</a>')
     sidebar_parts.append('</div>')
 
-    body = ['<h1>Cflat API Reference</h1>',
+    body = [f'<h1>{_ns.pascal} API Reference</h1>',
             '<div class="meta">Auto-generated module index</div>']
     if synopsis:
         body.append('<div class="synopsis">' + _link_type_names(md_to_html("\n".join(synopsis))) + '</div>')
@@ -565,4 +606,4 @@ def render_index_html(modules: list[ModuleDoc], synopsis: list[str]) -> str:
                     f'<div class="desc">{esc(m.title)}</div></a>')
     body.append('</div>')
 
-    return _shell("Cflat API Reference", "".join(sidebar_parts), "".join(body))
+    return _shell(f"{_ns.pascal} API Reference", "".join(sidebar_parts), "".join(body))

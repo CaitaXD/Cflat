@@ -4,7 +4,7 @@ from a parsed ModuleDoc. Faithful port of the original `_collect_module_sections
 from __future__ import annotations
 import re
 
-from .model import ModuleDoc, ModuleSections
+from .model import ModuleDoc, ModuleSections, Namespace
 from .parsing import (
     parse_function_decl, parse_macro_signature, parse_macro_param_names,
     parse_param_decls, parse_param_decl, split_top_level_commas,
@@ -14,7 +14,13 @@ from .parsing import (
 )
 
 
-def collect_module_sections(doc: ModuleDoc) -> ModuleSections:
+_ns: Namespace = Namespace("cflat")
+
+
+def collect_module_sections(doc: ModuleDoc, ns: Namespace | None = None) -> ModuleSections:
+    global _ns
+    if ns:
+        _ns = ns
     resolved_macro_wrappers = dict(doc.macro_opt_wrappers)
     opt_entries: list = []
     scope_entries: list = []
@@ -24,7 +30,7 @@ def collect_module_sections(doc: ModuleDoc) -> ModuleSections:
 
     if doc.declarations:
         for decl in doc.declarations:
-            if "cflat__" in decl:
+            if f"{_ns.snake}_" in decl:
                 continue
             parsed = parse_function_decl(decl)
             if parsed:
@@ -62,13 +68,13 @@ def collect_module_sections(doc: ModuleDoc) -> ModuleSections:
             if sig in resolved_macro_wrappers:
                 continue
             body = doc.macro_bodies.get(sig, "")
-            if not body or "cflat_defer(" in body:
+            if not body or f"{_ns.snake}defer(" in body:
                 continue
             local_defaults = extract_opt_defaults(body)
             for call_name in re.findall(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(", body):
                 inh = macro_name_to_wrapper.get(call_name)
-                if inh is None and not call_name.startswith("cflat_"):
-                    inh = macro_name_to_wrapper.get(f"cflat_{call_name}")
+                if inh is None and not call_name.startswith(_ns.snake):
+                    inh = macro_name_to_wrapper.get(f"{_ns.snake}{call_name}")
                 if inh is None and call_name.endswith("_opt"):
                     inh = (call_name, {})
                 if inh is None:
@@ -97,7 +103,7 @@ def collect_module_sections(doc: ModuleDoc) -> ModuleSections:
             macro_param_names = [n for n in parse_macro_param_names(params) if n != "..."]
             body = doc.macro_bodies.get(sig, "")
             bridge = wrapper_bridge_calls.get(sig, target.removesuffix("_opt"))
-            bridge_pref = bridge if bridge.startswith("cflat_") else f"cflat_{bridge}"
+            bridge_pref = bridge if bridge.startswith(_ns.snake) else f"{_ns.snake}{bridge}"
             bridge_args = find_call_args(body, bridge) or find_call_args(body, bridge_pref) or []
 
             rendered: list[str] = []
@@ -169,7 +175,7 @@ def collect_module_sections(doc: ModuleDoc) -> ModuleSections:
                 varargs = len(parts) != len(raw)
                 promo: list[str] = []
                 if varargs:
-                    for cn in re.findall(r"\b(cflat_[A-Za-z0-9_]+)\s*\(", body):
+                    for cn in re.findall(rf"\b({_ns.snake}[A-Za-z0-9_]+)\s*\(", body):
                         p = promoted_by_target.get(cn)
                         if not p:
                             continue
@@ -202,7 +208,7 @@ def collect_module_sections(doc: ModuleDoc) -> ModuleSections:
                 nested = ["Caller:", f"  {name} {{", "    ...", "  }"]
 
             ordered: list[str] = []
-            for cn in re.findall(r"\b(cflat_[A-Za-z0-9_]+)\s*\(", body):
+            for cn in re.findall(rf"\b({_ns.snake}[A-Za-z0-9_]+)\s*\(", body):
                 if cn in parsed_function_by_name and cn not in ordered:
                     ordered.append(cn)
             if ordered:
@@ -234,7 +240,7 @@ def collect_module_sections(doc: ModuleDoc) -> ModuleSections:
     all_type_names = sorted(set(doc.typedefs) | set(doc.struct_fields.keys()))
     renderable_macros: list[str] = []
     for macro in doc.macros:
-        if macro.startswith("cflat__") or macro.startswith("CFLAT__"):
+        if macro.startswith(f"{_ns.snake}_") or macro.startswith(f"{_ns.upper}_"):
             continue
         name, _ = parse_macro_signature(macro)
         if name.endswith("_scope") or name.endswith("_foreach"):

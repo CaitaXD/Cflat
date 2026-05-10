@@ -1,0 +1,19 @@
+ISSUE 1
+
+    CflatBit.h functions are not getting collected by the generated docs
+    
+    Hypothesis 1: 
+        type(name)(args) is not getting catched by the regex as oposed to 
+        type name(args)
+
+    Hypethesis 2:
+        Its because it dosent begin with cflat_bit
+
+ISSUE 2
+
+    To run the doc i need to cd to doc and run `python -m cflatdoc --src-dir ../src`
+
+    I should be able to be at the module root aka ../Cflat and just run `python -m cflatdoc --src-dir src`
+
+    Note:
+        Change the current infer mechanism as it currently is hardcoded to go back 3 folders and it should be the name of the current folder

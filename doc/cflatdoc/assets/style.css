@@ -92,7 +92,7 @@ a.tk-fn:hover{text-decoration-color:var(--accent)}
 .params{margin:.6em 0;display:grid;grid-template-columns:max-content 1fr;gap:6px 16px}
 .params dt{font-family:var(--font-mono);font-weight:600;color:var(--accent)}
 .params dd{color:var(--fg)}
-.generic-note{font-size:.8em;color:var(--muted);margin-top:8px}
+.generic-note{font-size:.9em;color:var(--muted);margin-top:8px}
 .cond{margin-top:.8em;padding:10px 14px;background:var(--panel-2);border-left:3px solid var(--accent);border-radius:4px}
 .cond{border-left-color:var(--amber)}
 .cond ul{margin-left:1.2em;margin-top:.3em}

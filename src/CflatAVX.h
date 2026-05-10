@@ -17,6 +17,10 @@
 
 #define cflat_for_vec(TVec, OFFSET, LEN) for (; (OFFSET) + cflat_vec_length(TVec) <= (LEN); (OFFSET) += cflat_vec_length(TVec))
 
+/*
+@param v: @if(__AVX__) 256 bit avx register of single precision
+@param v: @else        array of 8 32bit floats
+*/
 typedef struct cflat_vec256f {
     #if defined (__AVX__)
     cflat_alignas(32) __m256 v;
@@ -25,6 +29,10 @@ typedef struct cflat_vec256f {
     #endif
 } CflatVec256f;
 
+/*
+@param v: @if(__AVX__) 256 bit avx register of single precision
+@param v: @else        array of 4 32bit complex floats
+*/
 typedef struct cflat_vec256cf {
     #if defined (__AVX__)
     cflat_alignas(32) __m256 v;
@@ -33,6 +41,10 @@ typedef struct cflat_vec256cf {
     #endif
 } CflatVec256cf;
 
+/*
+@param v: @if(__AVX__) 256 bit avx register of double precision
+@param v: @else        array of 4 64bit floats
+*/
 typedef struct cflat_vec256d {
     #if defined (__AVX__)
     cflat_alignas(32) __m256d v;
@@ -41,6 +53,10 @@ typedef struct cflat_vec256d {
     #endif
 } CflatVec256d;
 
+/*
+@param v: @if(__AVX__) 256 bit avx register of integers
+@param v: @else        array of 8 32bit integers
+*/
 typedef struct cflat_vec256i {
     #if defined (__AVX__)
     cflat_alignas(32) __m256i v;
