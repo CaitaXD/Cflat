@@ -108,7 +108,6 @@ CflatDfaKmp* cflat_dfa_kmp_new(CflatArena *a, usize rows, usize columns) {
 
 CflatDfaKmp* cflat_dfa_kmp_match_sv(CflatDfaKmp *dfa, CflatStringView pattern) {
     cflat_assert(dfa->rows >= pattern.length + 1 && "DFA too small");
-    usize final_state = dfa->rows - 1;
 
     for (usize i = 0; i < dfa->columns; ++i) 
         cflat_dfa_at(dfa, 0, i) = 0;

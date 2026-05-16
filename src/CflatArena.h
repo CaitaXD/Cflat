@@ -229,7 +229,7 @@ static void *cflat__os_reserve(usize size)
     void *result = VirtualAlloc(0, size, MEM_RESERVE, PAGE_READWRITE);
     return result;
     #elif defined(OS_UNIX)
-    void *result = mmap(0, size, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+    void *result = mmap(0, (off_t)size, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
     if(result == MAP_FAILED)
     {
         result = 0;
@@ -344,7 +344,7 @@ static void* cflat__os_memory_mapped_file(const char *filepath, usize size_hint,
     struct stat sb;
     if (fstat(fd, &sb) == -1) { close(fd); return NULL; }
     
-    void *result = mmap(NULL, cflat_max(sb.st_size, size_hint), prot, MAP_PRIVATE, fd, 0);
+    void *result = mmap(NULL, cflat_max((off_t)sb.st_size, (off_t)size_hint), prot, MAP_PRIVATE, fd, 0);
     close(fd);
     return (result == MAP_FAILED) ? NULL : result;
     
