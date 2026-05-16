@@ -19,7 +19,7 @@ typedef struct cflat_slice_new_opt {
     bool clear;
 } CflatSliceNewOpt;
 
-typedef struct cflat_byte_slice { 
+typedef struct cflat_slice_byte { 
     CFLAT_SLICE_FIELDS(byte); 
 } CflatByteSlice;
 
@@ -29,6 +29,12 @@ typedef struct cflat_byte_slice {
                           (LEN),                                                                                                        \
                           CFLAT_OPT(CflatSliceNewOpt, .capacity = 4, .align = cflat_alignof_member(TSlice, data[0]), __VA_ARGS__)       \
     )                                                                                                                                   \
+}
+
+#define cflat_slice_lit(T, ...) (CONCAT(struct cflat_slice_, T)) {  \
+    .data     = ((T[]){ __VA_ARGS__ }),                             \
+    .length   = ARRAY_SIZE(((T[]){ __VA_ARGS__ })),                 \
+    .capacity = ARRAY_SIZE(((T[]){ __VA_ARGS__ }))                  \
 }
 
 #define cflat_subslice(TSlice, SLICE, OFFSET, LEN) cflat_lvalue_cast(CflatByteSlice, TSlice) {                                          \
@@ -94,5 +100,6 @@ CflatByteSlice cflat__slice_new_opt(usize element_size, CflatArena *a, usize len
 #   define slice_skip cflat_slice_skip
 #   define slice_take cflat_slice_take
 #   define slice_at cflat_slice_at
+#   define slice_lit cflat_slice_lit
 
 #endif // CFLAT_SLICE_NO_ALIAS
