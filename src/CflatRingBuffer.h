@@ -29,7 +29,7 @@ CFLAT_DEF void cflat_ring_buffer_clear              (CflatRingBuffer *rb        
 CFLAT_DEF bool cflat_ring_buffer_write              (CflatRingBuffer *rb, usize element_size, const void *src                      );
 CFLAT_DEF bool cflat_ring_buffer_read_opt           (CflatRingBuffer *rb, usize element_size, void *dst, CflatRingBufferReadOpt opt);
 CFLAT_DEF void cflat_ring_buffer_overwrite          (CflatRingBuffer *rb, usize element_size, const void *src                      );
-#define cflat_ring_buffer_read(rb, element_size, dst, ...) ring_buffer_read_opt(rb, element_size, dst, CFLAT_OPT(CflatRingBufferReadOpt, .clear = false, __VA_ARGS__))
+#define cflat_ring_buffer_read(rb, element_size, dst, ...) CFLAT_OPT(ring_buffer_read_opt(rb, element_size, dst, (CflatRingBufferReadOpt){ .clear = false, __VA_ARGS__}))
 
 #if defined(CFLAT_IMPLEMENTATION)
 #define CFLAT_RING_BUFFER_IMPLEMENTATION

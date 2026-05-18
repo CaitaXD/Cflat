@@ -255,15 +255,15 @@ typedef SSIZE_T ssize_t;
 #endif
 
 #if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
-#define CFLAT_OPT(CLITERAL, ...)                                \
-__extension__  ({                                               \
-    _Pragma("GCC diagnostic push")                              \
-    _Pragma("GCC diagnostic ignored \"-Woverride-init\"")       \
-    ((CLITERAL) {__VA_ARGS__});                                 \
-    _Pragma("GCC diagnostic pop")                               \
+#define CFLAT_OPT(X)                                    \
+__extension__ ({                                        \
+    _Pragma("GCC diagnostic push")                      \
+    _Pragma("GCC diagnostic ignored \"-Woverride-init\"") \
+    X;                                                  \
+    _Pragma("GCC diagnostic pop")                       \
 })
 #else
-#   define CFLAT_OPT(CLITERAL, ...) ((CLITERAL) {__VA_ARGS__})
+#define CFLAT_OPT(X) X
 #endif
 
 #if defined(COMPILER_GCC) || defined(COMPILER_CLANG)

@@ -24,11 +24,11 @@ typedef struct cflat_slice_byte {
 } CflatByteSlice;
 
 #define cflat_slice_new(TSlice, ARENA, LEN, ...) cflat_lvalue_cast(CflatByteSlice, TSlice) {                                            \
-    cflat__slice_new_opt( (cflat_sizeof_member(TSlice, data[0])),                                                                       \
+    CFLAT_OPT(cflat__slice_new_opt( (cflat_sizeof_member(TSlice, data[0])),                                                             \
                           (ARENA),                                                                                                      \
                           (LEN),                                                                                                        \
-                          CFLAT_OPT(CflatSliceNewOpt, .capacity = 4, .align = cflat_alignof_member(TSlice, data[0]), __VA_ARGS__)       \
-    )                                                                                                                                   \
+                          (CflatSliceNewOpt){ .capacity = 4, .align = cflat_alignof_member(TSlice, data[0]), __VA_ARGS__}              \
+    ))                                                                                                                                  \
 }
 
 #define cflat_slice_lit(T, ...) (CONCAT(struct cflat_slice_, T)) {  \
