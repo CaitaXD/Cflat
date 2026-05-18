@@ -231,7 +231,8 @@ CflatStringView cflat_sv_printf(CflatArena *a, const char *fmt, ...) {
     va_list args, args_copy;
     va_start(args, fmt);
     va_copy(args_copy, args);
-    int required_length = vsnprintf(NULL, 0, fmt, args) + 1;
+    char dummy;
+    int required_length = vsnprintf(&dummy, 0, fmt, args) + 1;
     va_end(args);
     CflatStringView result = (CflatStringView) {
         .data = arena_push(a, required_length, .align = cflat_alignof(char), .clear = false),
