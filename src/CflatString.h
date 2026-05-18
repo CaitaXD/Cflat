@@ -65,6 +65,17 @@ CFLAT_DEF isize        cflat_dfa_run_cstr  (CflatDfaKmp *dfa, const char *str);
 
 #if defined(CFLAT_STRING_IMPLEMENTATION)
 
+#if defined(__GNUC__) || defined(__clang__)
+    #define DIAGNOSTIC_IGNORE_TRUNCATION() \
+        _Pragma("GCC diagnostic push") \
+        _Pragma("GCC diagnostic ignored \"-Wformat-truncation\"")
+    #define DIAGNOSTIC_POP() \
+        _Pragma("GCC diagnostic pop")
+#else
+    #define DIAGNOSTIC_IGNORE_TRUNCATION()
+    #define DIAGNOSTIC_POP()
+#endif
+
 CflatStringView cflat_sv_from_cstr(const char *cstr)  { 
     const usize len = strlen(cstr);
     return (CflatStringView) { 
@@ -231,8 +242,9 @@ CflatStringView cflat_sv_printf(CflatArena *a, const char *fmt, ...) {
     va_list args, args_copy;
     va_start(args, fmt);
     va_copy(args_copy, args);
-    char dummy;
-    int required_length = vsnprintf(&dummy, 0, fmt, args) + 1;
+    DIAGNOSTIC_IGNORE_TRUNCATION();
+    int required_length = vsnprintf((char[1]){0}, 0, fmt, args) + 1;
+    DIAGNOSTIC_POP();
     va_end(args);
     CflatStringView result = (CflatStringView) {
         .data = arena_push(a, required_length, .align = cflat_alignof(char), .clear = false),
